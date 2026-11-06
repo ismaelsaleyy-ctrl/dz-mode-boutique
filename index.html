@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Dz Mode – Boutique de démonstration</title>
+<meta name="description" content="Boutique de démonstration (fictive) : vêtements et chaussures, livraison 58 wilayas, paiement à la livraison.">
+<link rel="preconnect" href="https://images.unsplash.com">
+
+<script>
+/* ==========================================================================
+   ⚙️  CONFIGURATION — TOUT CE QU'IL FAUT MODIFIER POUR CHAQUE CLIENT
+   ========================================================================== */
+
+/* ---------- 1. IDENTITÉ DE LA BOUTIQUE ---------- */
+const NOM_BOUTIQUE = "Dz Mode";                  // Nom affiché dans le logo, le titre, le pied de page
+const LANGUE_PAR_DEFAUT = "fr";                  // "fr" ou "ar" (on peut aussi forcer avec ?lang=ar dans l'URL)
+const DEVISE = { fr: "DA", ar: "دج" };           // Symbole de la monnaie
+
+/* ---------- 2. COULEURS ---------- */
+const COULEURS = {
+  principale: "#111827",   // En-tête, textes forts, pied de page
+  accent:     "#E11D48",   // Promos, prix, boutons "Acheter maintenant"
+  succes:     "#16A34A",   // Bouton "Confirmer la commande", paiement à la livraison
+  fond:       "#F6F6F7"    // Couleur de fond du site
+};
+
+/* ---------- 3. CONTACT ---------- */
+const WHATSAPP_NUMERO = "213555000000";          // Format international SANS "+" ni 0 (ex : 213 + 555123456)
+const TELEPHONE_AFFICHE = "0555 00 00 00";       // Numéro affiché dans le pied de page
+const RESEAUX_SOCIAUX = {                        // Remplacer "#" par les vrais liens du client
+  facebook:  "#",
+  instagram: "#",
+  tiktok:    "#"
+};
+
+/* ---------- 4. PIXELS PUBLICITAIRES ---------- */
+// Laisser "VOTRE_ID" pour désactiver (aucune erreur ne sera affichée).
+const META_PIXEL_ID   = "VOTRE_ID";              // Ex : "123456789012345"
+const TIKTOK_PIXEL_ID = "VOTRE_ID";              // Ex : "CABCDEFGH1234567890"
+const AFFICHER_EVENEMENTS_CONSOLE = true;        // true = affiche les événements pixel dans la console (pratique pour tester)
+
+/* ---------- 5. GOOGLE SHEETS (réception des commandes) ---------- */
+// Coller ici l'URL de l'application Web Apps Script (elle finit par /exec).
+// Si l'URL n'est pas remplie, le site fonctionne quand même (mode démo).
+const GOOGLE_SHEET_URL = "COLLER_ICI_URL_APPS_SCRIPT";
+
+/* ---------- 6. BANNIÈRE & BANDEAU PROMO ---------- */
+const BANDEAU_PROMO = {
+  fr: "Livraison vers les 58 wilayas – Paiement à la livraison",
+  ar: "التوصيل إلى 58 ولاية – الدفع عند الاستلام"
+};
+const BANNIERE = {
+  image:     "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1400&q=70",
+  etiquette: { fr: "Nouvelle collection", ar: "تشكيلة جديدة" },
+  titre:     { fr: "-30% sur la nouvelle collection", ar: "تخفيض 30% على التشكيلة الجديدة" },
+  texte:     { fr: "Vêtements et chaussures tendance, livrés partout en Algérie. Vous payez seulement à la réception.",
+               ar: "ملابس وأحذية عصرية تصلك إلى كل أنحاء الجزائر. تدفع فقط عند الاستلام." }
+};
+
+/* ---------- 7. PRIX DE LIVRAISON PAR WILAYA (en DA) ---------- */
+// Colonnes : N°, nom FR, nom AR, prix À DOMICILE, prix AU BUREAU (stop desk).
+// Mettre null dans la colonne "Bureau" si le stop desk n'existe pas dans cette wilaya.
+const PRIX_LIVRAISON = [
+//  N°    Wilaya (FR)              Wilaya (AR)          Domicile  Bureau
+  ["01", "Adrar",                 "أدرار",              1200,     800],
+  ["02", "Chlef",                 "الشلف",              650,      400],
+  ["03", "Laghouat",              "الأغواط",            750,      450],
+  ["04", "Oum El Bouaghi",        "أم البواقي",         750,      450],
+  ["05", "Batna",                 "باتنة",              750,      450],
+  ["06", "Béjaïa",                "بجاية",              650,      400],
+  ["07", "Biskra",                "بسكرة",              750,      450],
+  ["08", "Béchar",                "بشار",               900,      550],
+  ["09", "Blida",                 "البليدة",            550,      350],
+  ["10", "Bouira",                "البويرة",            650,      400],
+  ["11", "Tamanrasset",           "تمنراست",            1200,     800],
+  ["12", "Tébessa",               "تبسة",               750,      450],
+  ["13", "Tlemcen",               "تلمسان",             650,      400],
+  ["14", "Tiaret",                "تيارت",              650,      400],
+  ["15", "Tizi Ouzou",            "تيزي وزو",           650,      400],
+  ["16", "Alger",                 "الجزائر",            400,      250],
+  ["17", "Djelfa",                "الجلفة",             750,      450],
+  ["18", "Jijel",                 "جيجل",               650,      400],
+  ["19", "Sétif",                 "سطيف",               650,      400],
+  ["20", "Saïda",                 "سعيدة",              650,      400],
+  ["21", "Skikda",                "سكيكدة",             650,      400],
+  ["22", "Sidi Bel Abbès",        "سيدي بلعباس",        650,      400],
+  ["23", "Annaba",                "عنابة",              650,      400],
+  ["24", "Guelma",                "قالمة",              650,      400],
+  ["25", "Constantine",           "قسنطينة",            650,      400],
+  ["26", "Médéa",                 "المدية",             650,      400],
+  ["27", "Mostaganem",            "مستغانم",            650,      400],
+  ["28", "M'Sila",                "المسيلة",            750,      450],
+  ["29", "Mascara",               "معسكر",              650,      400],
+  ["30", "Ouargla",               "ورقلة",              900,      550],
+  ["31", "Oran",                  "وهران",              650,      400],
+  ["32", "El Bayadh",             "البيض",              750,      450],
+  ["33", "Illizi",                "إليزي",              1200,     800],
+  ["34", "Bordj Bou Arréridj",    "برج بوعريريج",       650,      400],
+  ["35", "Boumerdès",             "بومرداس",            550,      350],
+  ["36", "El Tarf",               "الطارف",             650,      400],
+  ["37", "Tindouf",               "تندوف",              1200,     800],
+  ["38", "Tissemsilt",            "تيسمسيلت",           650,      400],
+  ["39", "El Oued",               "الوادي",             900,      550],
+  ["40", "Khenchela",             "خنشلة",              750,      450],
+  ["41", "Souk Ahras",            "سوق أهراس",          650,      400],
+  ["42", "Tipaza",                "تيبازة",             550,      350],
+  ["43", "Mila",                  "ميلة",               650,      400],
+  ["44", "Aïn Defla",             "عين الدفلى",         650,      400],
+  ["45", "Naâma",                 "النعامة",            750,      450],
+  ["46", "Aïn Témouchent",        "عين تموشنت",         650,      400],
+  ["47", "Ghardaïa",              "غرداية",             900,      550],
+  ["48", "Relizane",              "غليزان",             650,      400],
+  ["49", "Timimoun",              "تيميمون",            1200,     800],
+  ["50", "Bordj Badji Mokhtar",   "برج باجي مختار",     1500,     null],
+  ["51", "Ouled Djellal",         "أولاد جلال",         750,      450],
+  ["52", "Béni Abbès",            "بني عباس",           1200,     800],
+  ["53", "In Salah",              "عين صالح",           1200,     800],
+  ["54", "In Guezzam",            "عين قزام",           1500,     null],
+  ["55", "Touggourt",             "تقرت",               900,      550],
+  ["56", "Djanet",                "جانت",               1500,     null],
+  ["57", "El M'Ghair",            "المغير",             900,      550],
+  ["58", "El Meniaa",             "المنيعة",            900,      550]
+];
+
+/* ---------- 8. TAILLES ---------- */
+const TAILLES = {
+  vetements:  ["S", "M", "L", "XL"],
+  chaussures: ["39", "40", "41", "42", "43", "44", "45"]
+};
+
+/* ---------- 9. PRODUITS ---------- */
+// U("id-photo-unsplash") construit une URL Unsplash. Vous pouvez aussi mettre
+// directement n'importe quelle URL d'image, ex : "images/tshirt-1.jpg".
+// Le 2e paramètre de U() sert à zoomer sur une partie de la photo (fp-x, fp-y = position, fp-z = zoom).
+const U = (id, zoom) => "https://images.unsplash.com/photo-" + id + "?auto=format&fit=crop&w=800&h=800&q=70" + (zoom ? "&crop=focalpoint&" + zoom : "");
+
+const PRODUITS = [
+  {
+    id: "tshirt-premium", categorie: "vetements", prix: 1990, ancienPrix: 2900, stock: 14,
+    nom: { fr: "T-shirt Coton Premium", ar: "تيشيرت قطني بريميوم" },
+    description: {
+      fr: "T-shirt en coton peigné 100 %, coupe droite et col rond renforcé. Doux, respirant et facile à associer : l'essentiel de tous les jours.",
+      ar: "تيشيرت من القطن الممشط 100%، بقصة مستقيمة وياقة دائرية متينة. ناعم ومريح وسهل التنسيق: قطعة أساسية لكل يوم."
+    },
+    couleurs: [ { fr: "Blanc", ar: "أبيض", hex: "#FFFFFF" }, { fr: "Noir", ar: "أسود", hex: "#111111" }, { fr: "Beige", ar: "بيج", hex: "#D8C3A5" } ],
+    photos: [ U("1521572163474-6864f9cf17ab"), U("1581655353564-df123a1eb820"), U("1489987707025-afc232f7ea0f") ]
+  },
+  {
+    id: "hoodie-oversize", categorie: "vetements", prix: 3990, ancienPrix: 5900, stock: 9,
+    nom: { fr: "Hoodie Oversize Molleton", ar: "هودي أوفرسايز قطني" },
+    description: {
+      fr: "Sweat à capuche coupe oversize en molleton épais, intérieur gratté bien chaud. Poche kangourou et capuche doublée.",
+      ar: "هودي بقصة واسعة من قماش سميك، من الداخل ناعم ودافئ. جيب أمامي وقبعة مبطنة."
+    },
+    couleurs: [ { fr: "Gris chiné", ar: "رمادي", hex: "#9CA3AF" }, { fr: "Noir", ar: "أسود", hex: "#111111" }, { fr: "Crème", ar: "كريمي", hex: "#F3EBDD" } ],
+    photos: [ U("1556821840-3a63f95609a7"), U("1556821840-3a63f95609a7", "fp-x=0.5&fp-y=0.3&fp-z=1.8"), U("1556821840-3a63f95609a7", "fp-x=0.5&fp-y=0.75&fp-z=1.7") ]
+  },
+  {
+    id: "jean-slim", categorie: "vetements", prix: 3900, ancienPrix: 5500, stock: 11,
+    nom: { fr: "Jean Slim Stretch", ar: "جينز سليم مرن" },
+    description: {
+      fr: "Jean coupe slim en denim stretch confortable. Il garde sa forme toute la journée et s'adapte à tous les styles.",
+      ar: "جينز بقصة ضيقة من قماش دنيم مرن ومريح. يحافظ على شكله طوال اليوم ويناسب كل الأساليب."
+    },
+    couleurs: [ { fr: "Bleu brut", ar: "أزرق داكن", hex: "#1E3A5F" }, { fr: "Bleu clair", ar: "أزرق فاتح", hex: "#7B9CC0" }, { fr: "Noir", ar: "أسود", hex: "#111111" } ],
+    photos: [ U("1638247025967-b4e38f787b76"), U("1604176354204-9268737828e4"), U("1541099649105-f69ad21f3246") ]
+  },
+  {
+    id: "veste-biker", categorie: "vetements", prix: 7900, ancienPrix: 11900, stock: 6,
+    nom: { fr: "Veste Biker Simili Cuir", ar: "جاكيت بايكر جلد صناعي" },
+    description: {
+      fr: "Veste style biker en simili cuir souple, fermeture zippée asymétrique et doublure intérieure. Le look qui fait la différence.",
+      ar: "جاكيت بستايل بايكر من جلد صناعي ناعم، سحاب جانبي وبطانة داخلية. إطلالة مميزة."
+    },
+    couleurs: [ { fr: "Noir", ar: "أسود", hex: "#111111" }, { fr: "Marron", ar: "بني", hex: "#6B4226" } ],
+    photos: [ U("1551028719-00167b16eac5"), U("1520975954732-35dd22299614"), U("1551028719-00167b16eac5", "fp-x=0.5&fp-y=0.45&fp-z=2") ]
+  },
+  {
+    id: "baskets-urban", categorie: "chaussures", prix: 4990, ancienPrix: 7200, stock: 10,
+    nom: { fr: "Baskets Urban Confort", ar: "حذاء رياضي أوربان" },
+    description: {
+      fr: "Baskets basses en matière douce, semelle légère et amortissante. Parfaites pour marcher toute la journée en ville.",
+      ar: "حذاء رياضي منخفض بخامة ناعمة ونعل خفيف مريح. مثالي للمشي طوال اليوم في المدينة."
+    },
+    couleurs: [ { fr: "Blanc / Beige", ar: "أبيض / بيج", hex: "#E8D9C4" }, { fr: "Blanc", ar: "أبيض", hex: "#FFFFFF" } ],
+    photos: [ U("1603808033192-082d6919d3e1"), U("1603808033192-082d6919d3e1", "fp-x=0.55&fp-y=0.65&fp-z=2"), U("1603808033192-082d6919d3e1", "fp-x=0.45&fp-y=0.3&fp-z=1.8") ]
+  },
+  {
+    id: "baskets-classic", categorie: "chaussures", prix: 4490, ancienPrix: 6400, stock: 13,
+    nom: { fr: "Baskets Classic Blanches", ar: "حذاء رياضي أبيض كلاسيكي" },
+    description: {
+      fr: "Le classique blanc qui va avec tout. Tige en simili cuir lisse, semelle cousue et semelle intérieure confort.",
+      ar: "الحذاء الأبيض الكلاسيكي الذي يناسب كل شيء. جلد صناعي أملس، نعل مخيط وضبان داخلي مريح."
+    },
+    couleurs: [ { fr: "Blanc", ar: "أبيض", hex: "#FFFFFF" }, { fr: "Blanc / Gris", ar: "أبيض / رمادي", hex: "#9CA3AF" } ],
+    photos: [ U("1587563871167-1ee9c731aefb"), U("1587563871167-1ee9c731aefb", "fp-x=0.7&fp-y=0.45&fp-z=1.8"), U("1587563871167-1ee9c731aefb", "fp-x=0.4&fp-y=0.6&fp-z=1.7") ]
+  },
+  {
+    id: "bottines-cuir", categorie: "chaussures", prix: 6990, ancienPrix: 9900, stock: 7,
+    nom: { fr: "Bottines en Cuir Lacées", ar: "بوط جلد برباط" },
+    description: {
+      fr: "Bottines montantes en cuir, semelle crantée antidérapante. Robustes et confortables pour l'hiver.",
+      ar: "بوط عالٍ من الجلد بنعل مضاد للانزلاق. متين ومريح لفصل الشتاء."
+    },
+    couleurs: [ { fr: "Camel", ar: "عسلي", hex: "#A0652F" }, { fr: "Kaki", ar: "كاكي", hex: "#6B6B47" } ],
+    photos: [ U("1520639888713-7851133b1ed0"), U("1605812860427-4024433a70fd"), U("1520639888713-7851133b1ed0", "fp-x=0.35&fp-y=0.65&fp-z=1.8") ]
+  },
+  {
+    id: "derby-cuir", categorie: "chaussures", prix: 5990, ancienPrix: 8500, stock: 8,
+    nom: { fr: "Chaussures Derby en Cuir", ar: "حذاء ديربي جلد" },
+    description: {
+      fr: "Derby en cuir lisse, finition soignée et semelle confortable. Idéales pour le travail, les fêtes et les mariages.",
+      ar: "حذاء ديربي من الجلد الأملس، تشطيب أنيق ونعل مريح. مثالي للعمل والمناسبات والأعراس."
+    },
+    couleurs: [ { fr: "Marron", ar: "بني", hex: "#7B3F1D" }, { fr: "Cognac", ar: "بني فاتح", hex: "#9A5B2E" } ],
+    photos: [ U("1449505278894-297fdb3edbc1"), U("1614252235316-8c857d38b5f4"), U("1614253429340-98120bd6d753") ]
+  }
+];
+
+/* ---------- 10. AVIS EXEMPLE (fictifs, clairement marqués sur le site) ---------- */
+const AVIS_EXEMPLE = [
+  { nom: "Amine B.", ville: { fr: "Alger", ar: "الجزائر" }, note: 5,
+    texte: { fr: "Qualité top et taille conforme. Livré en 2 jours, j'ai payé à la réception.", ar: "جودة ممتازة والمقاس مضبوط. وصلني في يومين ودفعت عند الاستلام." } },
+  { nom: "Sara K.", ville: { fr: "Oran", ar: "وهران" }, note: 5,
+    texte: { fr: "On m'a appelée pour confirmer, très sérieux. Le produit est comme sur les photos.", ar: "اتصلوا بي لتأكيد الطلب، جديين جداً. المنتج مثل الصور." } },
+  { nom: "Yacine M.", ville: { fr: "Sétif", ar: "سطيف" }, note: 4,
+    texte: { fr: "Bon produit. J'ai échangé la taille sans problème.", ar: "منتج جيد. استبدلت المقاس بدون أي مشكل." } }
+];
+
+/* ==========================================================================
+   FIN DE LA CONFIGURATION — pas besoin de modifier le code en dessous
+   ========================================================================== */
+
+/* Applique les couleurs tout de suite (évite un flash de couleur au chargement) */
+(function () {
+  var s = document.documentElement.style;
+  s.setProperty("--c-principale", COULEURS.principale);
+  s.setProperty("--c-accent", COULEURS.accent);
+  s.setProperty("--c-succes", COULEURS.succes);
+  s.setProperty("--c-fond", COULEURS.fond);
+})();
+
+/* ---------- Pixels Meta & TikTok (chargés seulement si les ID sont remplis) ---------- */
+function idPixelValide(id) {
+  return typeof id === "string" && id.trim() !== "" && !/VOTRE|COLLER|XXX/i.test(id);
+}
+const META_ACTIF = idPixelValide(META_PIXEL_ID);
+const TIKTOK_ACTIF = idPixelValide(TIKTOK_PIXEL_ID);
+
+if (META_ACTIF) {
+  try {
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq("init", META_PIXEL_ID.trim());
+    fbq("track", "PageView");
+  } catch (e) { console.warn("Meta Pixel :", e); }
+}
+
+if (TIKTOK_ACTIF) {
+  try {
+    !function (w, d, t) {
+      w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
+      ttq.load(TIKTOK_PIXEL_ID.trim());
+      ttq.page(); // PageView TikTok
+    }(window, document, "ttq");
+  } catch (e) { console.warn("TikTok Pixel :", e); }
+}
+
+/**
+ * Envoie un événement aux deux pixels.
+ * evenement : "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase"
+ * d : { id, nom, prix, quantite, valeur }   idEvenement : pour la déduplication (facultatif)
+ * Note : côté TikTok, "Purchase" est envoyé sous le nom standard "CompletePayment".
+ */
+function suivre(evenement, d, idEvenement) {
+  try {
+    if (META_ACTIF && window.fbq) {
+      var pm = {
+        content_ids: [d.id], content_name: d.nom, content_type: "product",
+        contents: [{ id: d.id, quantity: d.quantite, item_price: d.prix }],
+        value: d.valeur, currency: "DZD"
+      };
+      if (evenement === "InitiateCheckout" || evenement === "Purchase") pm.num_items = d.quantite;
+      if (idEvenement) fbq("track", evenement, pm, { eventID: idEvenement });
+      else fbq("track", evenement, pm);
+    }
+    if (TIKTOK_ACTIF && window.ttq) {
+      var nomTT = evenement === "Purchase" ? "CompletePayment" : evenement;
+      var pt = {
+        contents: [{ content_id: d.id, content_type: "product", content_name: d.nom, quantity: d.quantite, price: d.prix }],
+        content_type: "product", value: d.valeur, currency: "DZD"
+      };
+      if (idEvenement) ttq.track(nomTT, pt, { event_id: idEvenement });
+      else ttq.track(nomTT, pt);
+    }
+  } catch (e) { console.warn("Pixel :", e); }
+  if (AFFICHER_EVENEMENTS_CONSOLE) {
+    console.log("%c[Pixel] " + evenement, "color:#E11D48;font-weight:bold", d,
+      (META_ACTIF || TIKTOK_ACTIF) ? "" : "(démo : aucun ID pixel renseigné)");
+  }
+}
+</script>
+
+<style>
+:root{
+  --c-principale:#111827; --c-accent:#E11D48; --c-succes:#16A34A; --c-fond:#F6F6F7;
+  --c-texte:#111827; --c-gris:#6B7280; --c-bord:#E5E7EB; --c-carte:#FFFFFF;
+  --radius:14px; --ombre:0 6px 24px rgba(17,24,39,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Arabic",Tahoma,sans-serif;background:var(--c-fond);color:var(--c-texte);line-height:1.5;font-size:15px;overflow-x:hidden}
+html[dir=rtl] body{font-family:"Segoe UI","Noto Sans Arabic","Noto Naskh Arabic",Tahoma,system-ui,sans-serif;font-size:16px}
+img{max-width:100%;display:block}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+.container{width:100%;max-width:1160px;margin:0 auto;padding:0 16px}
+.muted{color:var(--c-gris);font-weight:500}
+.ico{flex-shrink:0;display:inline-block;vertical-align:middle}
+html[dir=rtl] .flip{transform:scaleX(-1)}
+.visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* --- Bandeaux du haut --- */
+.demo-bar{background:#EEF0F3;color:#6B7280;font-size:11.5px;text-align:center;padding:3px 16px}
+.promo-bar{background:var(--c-principale);color:#fff;font-size:13px;font-weight:600;text-align:center;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.promo-bar .ico{opacity:.85}
+
+/* --- En-tête --- */
+.header{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);-webkit-backdrop-filter:saturate(180%) blur(10px);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--c-bord)}
+.header-in{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.logo{font-weight:900;font-size:22px;letter-spacing:-.5px;white-space:nowrap}
+.logo i{color:var(--c-accent);font-style:normal}
+.nav{order:3;width:100%;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.nav::-webkit-scrollbar{display:none}
+.nav a{padding:6px 14px;border-radius:999px;background:#F3F4F6;font-size:14px;font-weight:600;white-space:nowrap;transition:background .2s}
+.nav a.promo{background:#FFF1F2;background:color-mix(in srgb,var(--c-accent) 12%,#fff);color:var(--c-accent)}
+.nav a.on{background:var(--c-principale);color:#fff}
+.header-actions{margin-inline-start:auto;display:flex;gap:8px;align-items:center}
+.btn-lang{border:1px solid var(--c-bord);background:#fff;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;line-height:1}
+.btn-cart{position:relative;width:42px;height:42px;border-radius:50%;border:0;background:#F3F4F6;display:grid;place-items:center}
+.cart-badge{position:absolute;top:-3px;inset-inline-end:-3px;background:var(--c-accent);color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 5px;border:2px solid #fff}
+.cart-badge[hidden]{display:none}
+@media(min-width:900px){
+  .nav{order:0;width:auto;margin-inline-start:28px}
+  .nav a{background:none}
+  .nav a:hover{background:#F3F4F6}
+}
+
+/* --- Accueil --- */
+.hero{position:relative;border-radius:var(--radius);overflow:hidden;margin-top:16px;min-height:390px;display:flex;align-items:flex-end;color:#fff;background:#222}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 15%,rgba(0,0,0,.78))}
+.hero-content{position:relative;z-index:1;padding:24px 20px;max-width:620px}
+.hero-tag{display:inline-block;background:var(--c-accent);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.hero h1{font-size:34px;line-height:1.1;margin:12px 0 8px;font-weight:900;letter-spacing:-.5px}
+.hero p{opacity:.92;margin-bottom:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:14px 22px;font-weight:800;font-size:16px;transition:transform .15s,filter .15s}
+.btn:active{transform:scale(.98)}
+.btn-blanc{background:#fff;color:var(--c-principale)}
+.btn-accent{background:var(--c-accent);color:#fff}
+.btn-succes{background:var(--c-succes);color:#fff}
+.btn:hover{filter:brightness(1.06)}
+@media(min-width:900px){
+  .hero{min-height:470px;align-items:center}
+  .hero::after{background:linear-gradient(90deg,rgba(0,0,0,.75),rgba(0,0,0,.1) 75%)}
+  html[dir=rtl] .hero::after{background:linear-gradient(270deg,rgba(0,0,0,.75),rgba(0,0,0,.1) 75%)}
+  .hero-content{padding:48px}
+  .hero h1{font-size:52px}
+  .hero p{font-size:17px}
+}
+
+.trust{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:12px;padding-bottom:2px}
+.trust::-webkit-scrollbar{display:none}
+.trust span{flex:1 0 auto;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid var(--c-bord);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.trust svg{color:var(--c-principale);flex-shrink:0}
+
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.cat{position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:4/3;color:#fff;background:#333}
+.cat img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.cat:hover img{transform:scale(1.05)}
+.cat::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.7))}
+.cat div{position:absolute;inset-inline-start:12px;bottom:10px;z-index:1}
+.cat b{display:block;font-size:19px;line-height:1.2}
+.cat small{font-size:12.5px;opacity:.9;display:inline-flex;align-items:center;gap:4px}
+@media(min-width:900px){.cats{aspect-ratio:auto}.cat{aspect-ratio:16/7}.cat b{font-size:24px}}
+
+.section{margin-top:36px}
+.section-head{margin-bottom:14px}
+.section-head h2{font-size:23px;font-weight:900;letter-spacing:-.3px;line-height:1.2}
+.section-head p{color:var(--c-gris);font-size:14px;margin-top:2px}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--c-bord);background:#fff;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700;white-space:nowrap}
+.chip.on{background:var(--c-principale);border-color:var(--c-principale);color:#fff}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(min-width:760px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}}
+.card{display:flex;flex-direction:column;background:var(--c-carte);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid #EEF0F2;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:var(--ombre);transform:translateY(-2px)}
+.card-img{position:relative;aspect-ratio:1/1;background:#EEE;overflow:hidden}
+.card-img img{width:100%;height:100%;object-fit:cover}
+.badge{position:absolute;top:8px;inset-inline-start:8px;background:var(--c-accent);color:#fff;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase}
+.badge-pct{position:absolute;top:8px;inset-inline-end:8px;background:#fff;color:var(--c-accent);font-size:12px;font-weight:900;padding:3px 7px;border-radius:6px}
+.card-body{padding:10px 11px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.card-name{font-size:14px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.prices{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.price-new{color:var(--c-accent);font-weight:900;font-size:16.5px;white-space:nowrap}
+.price-old{color:var(--c-gris);text-decoration:line-through;font-size:12.5px;white-space:nowrap}
+.card-btn{margin-top:auto;background:var(--c-accent);color:#fff;text-align:center;border-radius:10px;padding:10px 6px;font-weight:800;font-size:13.5px}
+
+.why{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(min-width:900px){.why{grid-template-columns:repeat(4,1fr);gap:16px}}
+.why-item{background:#fff;border:1px solid #EEF0F2;border-radius:var(--radius);padding:16px 14px}
+.why-ico{color:var(--c-principale);margin-bottom:12px;line-height:0}
+.why-item b{display:block;font-size:15px;line-height:1.25;margin-bottom:4px}
+.why-item p{font-size:13px;color:var(--c-gris);line-height:1.45}
+
+.faq details{background:#fff;border:1px solid #EEF0F2;border-radius:12px;margin-bottom:8px}
+.faq summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:700;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq .chev{color:var(--c-gris);transition:transform .2s}
+.faq details[open] .chev{transform:rotate(180deg)}
+.faq details p{padding:0 16px 14px;color:#4B5563;font-size:14px}
+
+/* --- Page produit --- */
+.back{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:14px;font-weight:600;color:var(--c-gris)}
+.pp{display:grid;gap:18px;margin-top:10px}
+@media(min-width:900px){.pp{grid-template-columns:1.05fr 1fr;gap:36px;align-items:start}.gallery{position:sticky;top:84px}}
+.g-main{position:relative;aspect-ratio:1/1;border-radius:var(--radius);overflow:hidden;background:#EEE;touch-action:pan-y}
+.g-main img{width:100%;height:100%;object-fit:cover}
+.g-count{position:absolute;bottom:10px;inset-inline-end:10px;background:rgba(17,24,39,.7);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
+.g-thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.g-thumbs button{aspect-ratio:1/1;border:2px solid transparent;border-radius:10px;overflow:hidden;padding:0;opacity:.65;background:#EEE;transition:opacity .2s,border-color .2s}
+.g-thumbs button.on{border-color:var(--c-principale);opacity:1}
+.g-thumbs img{width:100%;height:100%;object-fit:cover}
+
+.p-title{font-size:25px;font-weight:900;line-height:1.2;letter-spacing:-.3px}
+.p-prices{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.p-prices .price-new{font-size:28px}
+.p-prices .price-old{font-size:16px}
+.pill-save{background:#FFF1F2;background:color-mix(in srgb,var(--c-accent) 12%,#fff);color:var(--c-accent);font-weight:800;font-size:12.5px;padding:4px 9px;border-radius:999px}
+.p-desc{color:#4B5563;margin-top:10px;font-size:14.5px}
+
+.urgence{margin-top:14px;border-radius:12px;background:#FFF7ED;border:1px solid #FED7AA;padding:12px 14px}
+.cd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cd-row > span{font-weight:700;font-size:14px;color:#9A3412;display:inline-flex;align-items:center;gap:7px}
+.cd{display:flex;gap:6px;direction:ltr}
+.cd div{background:var(--c-principale);color:#fff;border-radius:8px;min-width:46px;text-align:center;padding:4px 4px 3px;line-height:1.1}
+.cd b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.cd small{font-size:10px;opacity:.75}
+.stock{margin-top:10px;font-size:13.5px;font-weight:700;color:#B91C1C;display:flex;align-items:center;gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#DC2626;flex-shrink:0;box-shadow:0 0 0 0 rgba(220,38,38,.5);animation:live 1.6s infinite}
+@keyframes live{70%{box-shadow:0 0 0 7px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+.stock-bar{height:6px;background:#FDE2E2;border-radius:6px;margin-top:6px;overflow:hidden}
+.stock-bar i{display:block;height:100%;background:linear-gradient(90deg,#F97316,#DC2626);border-radius:6px}
+
+.opts{margin-top:16px;display:grid;gap:14px}
+.opt-label{font-size:14px;margin-bottom:7px}
+.opt-list{display:flex;flex-wrap:wrap;gap:8px}
+.opt{border:1.5px solid var(--c-bord);background:#fff;border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,background .15s}
+.opt.on{border-color:var(--c-principale);background:var(--c-principale);color:#fff}
+.opt-size{min-width:52px;justify-content:center}
+.dot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.2);flex-shrink:0}
+.hint{display:block;color:var(--c-gris);font-size:12.5px;margin-top:6px}
+.qty{display:inline-flex;align-items:center;border:1.5px solid var(--c-bord);border-radius:10px;overflow:hidden;background:#fff}
+.qty button{width:44px;height:44px;border:0;background:#F9FAFB;display:grid;place-items:center}
+.qty span{min-width:48px;text-align:center;font-weight:800;font-size:16px}
+.grp-err .opt-list .opt{border-color:#FCA5A5}
+
+.order{margin-top:20px;background:#fff;border:2px solid var(--c-principale);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--ombre);scroll-margin-top:84px}
+.order h2{font-size:21px;font-weight:900;line-height:1.2}
+.order > p{color:var(--c-gris);font-size:13.5px;margin-top:2px}
+.cod{display:flex;gap:10px;align-items:center;background:#F0FDF4;background:color-mix(in srgb,var(--c-succes) 10%,#fff);border:1px dashed var(--c-succes);color:#14532D;border-radius:10px;padding:10px 12px;margin:14px 0;font-size:13.5px;font-weight:700}
+.cod svg{color:var(--c-succes);flex-shrink:0}
+.fields{display:grid;gap:12px}
+@media(min-width:520px){.fields .half{grid-column:span 1}.fields{grid-template-columns:1fr 1fr}.fields .full{grid-column:1 / -1}}
+.field label{display:block;font-size:13.5px;font-weight:700;margin-bottom:5px}
+.field label small{font-weight:500;color:var(--c-gris)}
+.field input,.field select{width:100%;height:48px;border:1.5px solid var(--c-bord);border-radius:10px;padding:0 13px;font-size:16px;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.field select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-inline-end:36px}
+html[dir=rtl] .field select{background-position:left 14px center}
+.field input:focus,.field select:focus{border-color:var(--c-principale);box-shadow:0 0 0 3px rgba(17,24,39,.08)}
+.field.err input,.field.err select{border-color:#DC2626;background:#FEF2F2}
+.err-msg{display:block;color:#DC2626;font-size:12.5px;font-weight:600;margin-top:4px}
+.err-msg:empty{display:none}
+input[name=tel]{direction:ltr;text-align:start}
+html[dir=rtl] input[name=tel]{text-align:right}
+
+.liv-title{font-size:13.5px;font-weight:700;margin:14px 0 6px}
+.liv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.liv label{position:relative;display:flex;flex-direction:column;gap:2px;border:1.5px solid var(--c-bord);border-radius:12px;padding:11px 12px;cursor:pointer;transition:border-color .15s,background .15s}
+.liv input{position:absolute;opacity:0;pointer-events:none}
+.liv label:has(input:checked){border-color:var(--c-principale);background:#F9FAFB;box-shadow:inset 0 0 0 1px var(--c-principale)}
+.liv label.on{border-color:var(--c-principale);background:#F9FAFB;box-shadow:inset 0 0 0 1px var(--c-principale)}
+.liv label.off{opacity:.45;cursor:not-allowed}
+.liv b{font-size:14px;line-height:1.25}
+.liv small{font-size:12px;color:var(--c-gris);line-height:1.3}
+.liv em{font-style:normal;font-weight:900;font-size:15px;margin-top:4px;color:var(--c-principale)}
+
+.recap{margin-top:16px;background:#F9FAFB;border-radius:12px;padding:12px 14px;font-size:14px}
+.recap h3{font-size:14px;font-weight:800;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;color:var(--c-gris)}
+.recap .row{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+.recap .row span:last-child{font-weight:700;text-align:end}
+.recap .sep{border-top:1px dashed #D1D5DB;margin:6px 0}
+.recap .total{font-size:18px;font-weight:900}
+.recap .total span:last-child{color:var(--c-accent);font-weight:900}
+
+.btn-confirm{width:100%;margin-top:14px;font-size:18px;padding:16px;box-shadow:0 8px 22px rgba(22,163,74,.3);animation:pulse 2.4s infinite}
+.btn-confirm[disabled]{opacity:.7;animation:none;cursor:wait}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+@media(prefers-reduced-motion:reduce){.btn-confirm{animation:none}html{scroll-behavior:auto}}
+.secure{font-size:12.5px;color:var(--c-gris);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px;text-align:center}
+.mini-trust{display:grid;gap:8px;margin-top:16px;font-size:13.5px;font-weight:600}
+.mini-trust span{display:flex;align-items:center;gap:8px}
+.mini-trust svg{color:var(--c-principale);flex-shrink:0}
+
+.reviews{display:grid;gap:10px}
+@media(min-width:900px){.reviews{grid-template-columns:repeat(3,1fr);gap:16px}}
+.review{background:#fff;border:1px solid #EEF0F2;border-radius:var(--radius);padding:14px}
+.review-head{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:#E5E7EB;display:grid;place-items:center;font-weight:800;color:#4B5563;flex-shrink:0}
+.review-head b{display:block;font-size:14px;line-height:1.2}
+.review-head small{color:var(--c-gris);font-size:12px}
+.tag-ex{margin-inline-start:auto;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;text-transform:uppercase}
+.stars{color:#F59E0B;margin:8px 0 4px;display:flex;gap:2px}
+.review p{font-size:14px;color:#374151}
+.note-ex{font-size:12.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px;margin-top:6px}
+
+.sticky-cta{position:fixed;left:0;right:0;bottom:0;z-index:45;background:#fff;border-top:1px solid var(--c-bord);box-shadow:0 -6px 20px rgba(0,0,0,.08);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:12px;align-items:center;transform:translateY(110%);transition:transform .25s}
+.sticky-cta.show{transform:none}
+.sticky-cta div{line-height:1.2;white-space:nowrap}
+.sticky-cta small{display:block;font-size:12px;color:var(--c-gris)}
+.sticky-cta b{font-size:17px;color:var(--c-accent)}
+.sticky-cta .btn{flex:1;padding:13px 10px;font-size:16px}
+@media(min-width:900px){.sticky-cta{display:none}}
+
+/* --- Page merci --- */
+.merci{max-width:560px;margin:28px auto 0;background:#fff;border-radius:var(--radius);padding:28px 18px;text-align:center;box-shadow:var(--ombre)}
+.merci-ico{width:72px;height:72px;border-radius:50%;background:#F0FDF4;background:color-mix(in srgb,var(--c-succes) 14%,#fff);color:var(--c-succes);display:grid;place-items:center;margin:0 auto 14px;animation:pop .4s ease-out}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.merci h1{font-size:24px;font-weight:900;line-height:1.25}
+.merci .lead{font-size:16px;color:#374151;margin-top:6px}
+.num{display:inline-block;margin-top:12px;background:#F3F4F6;border-radius:8px;padding:6px 12px;font-weight:700;font-size:14px}
+.merci .recap{text-align:start;margin-top:18px}
+.info-tel{margin-top:14px;font-size:14px;background:#EFF6FF;color:#1E3A8A;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;text-align:start}
+.info-tel .ico{margin-top:2px}
+.merci-btns{display:grid;gap:8px;margin-top:18px}
+
+/* --- Pied de page --- */
+.footer{margin-top:48px;background:var(--c-principale);color:#D1D5DB;padding:36px 0 24px;font-size:14px}
+.footer-grid{display:grid;gap:24px;grid-template-columns:1fr 1fr}
+.footer-grid > div:first-child{grid-column:1 / -1}
+@media(min-width:900px){.footer-grid{grid-template-columns:2fr 1fr 1fr 1fr}.footer-grid > div:first-child{grid-column:auto}}
+.footer .logo{color:#fff;display:inline-block;margin-bottom:8px}
+.footer h4{color:#fff;font-size:14px;margin-bottom:10px}
+.footer ul{list-style:none;display:grid;gap:6px}
+.tel-link{display:inline-flex;align-items:center;gap:6px}
+.footer a:hover,.footer button:hover{color:#fff}
+.footer button{background:none;border:0;color:inherit;padding:0;text-align:start}
+.socials{display:flex;gap:10px}
+.socials a{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;color:#fff;transition:background .2s}
+.socials a:hover{background:rgba(255,255,255,.2)}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.12);margin-top:28px;padding-top:16px;font-size:12.5px;color:#9CA3AF;display:grid;gap:4px}
+
+/* --- WhatsApp flottant + toast --- */
+.wa{position:fixed;bottom:18px;inset-inline-end:16px;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(37,211,102,.45);z-index:44;transition:bottom .25s,transform .2s}
+.wa:hover{transform:scale(1.07)}
+body.sticky-on .wa{bottom:84px}
+@media(min-width:900px){body.sticky-on .wa{bottom:18px}}
+.toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-150%);background:var(--c-principale);color:#fff;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;z-index:60;box-shadow:var(--ombre);transition:transform .3s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{transform:translate(-50%,0)}
+.toast.err{background:#DC2626}
+</style>
+</head>
+<body>
+
+<div class="demo-bar" id="demo-bar"></div>
+<div class="promo-bar" id="promo-bar"></div>
+<header class="header"><div class="container header-in" id="header"></div></header>
+
+<main id="app" class="container" aria-live="polite"></main>
+
+<footer class="footer"><div class="container" id="footer"></div></footer>
+
+<a class="wa" id="wa" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+</a>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+"use strict";
+
+/* ==================== Utilitaires ==================== */
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const app = $("#app");
+const pad = n => String(n).padStart(2, "0");
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+window.IMG_SECOURS = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#E5E7EB"/><text x="200" y="208" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#9CA3AF">' + NOM_BOUTIQUE + '</text></svg>');
+
+/* ==================== Langue ==================== */
+let lang = LANGUE_PAR_DEFAUT === "ar" ? "ar" : "fr";
+try { const l = localStorage.getItem("boutique_lang"); if (l === "fr" || l === "ar") lang = l; } catch (e) {}
+try { const q = new URLSearchParams(location.search).get("lang"); if (q === "fr" || q === "ar") lang = q; } catch (e) {}
+
+const I18N = {
+  fr: {
+    demo: "Site de démonstration – boutique fictive",
+    navVet: "Vêtements", navCha: "Chaussures", navPromo: "Promos",
+    langBtn: "العربية", panier: "Panier", panierVide: "Votre panier est vide : choisissez un produit.",
+    trust1: "Livraison 58 wilayas", trust2: "Paiement à la livraison", trust3: "Échange de taille",
+    catVoir: "Voir tout",
+    prodTitre: "Nos meilleures ventes", prodSous: "Profitez des prix promo avant la fin de l'offre.",
+    filtreTous: "Tous", titrePromo: "Promos du moment",
+    badgePromo: "Promo", acheter: "Acheter maintenant",
+    pourquoiTitre: "Pourquoi nous choisir ?",
+    p1t: "Livraison 58 wilayas", p1d: "Nous livrons partout en Algérie, à domicile ou au bureau de livraison.",
+    p2t: "Paiement à la livraison", p2d: "Aucun paiement en ligne : vous payez en espèces à la réception du colis.",
+    p3t: "Échange possible", p3d: "La taille ne vous va pas ? Nous vous l'échangeons rapidement.",
+    p4t: "Service client", p4d: "Une équipe disponible par téléphone et WhatsApp, 7j/7.",
+    faqTitre: "Questions fréquentes",
+    faq1q: "Quels sont les délais de livraison ?", faq1r: "24 à 48 h pour Alger et les grandes villes, 2 à 5 jours pour les autres wilayas, et jusqu'à 7 jours pour le grand Sud.",
+    faq2q: "Combien coûte la livraison ?", faq2r: "Le prix dépend de votre wilaya et du type de livraison (à domicile ou au bureau). Il s'affiche automatiquement dans le formulaire, avant de confirmer.",
+    faq3q: "Puis-je échanger la taille ?", faq3r: "Oui. Si la taille ne convient pas, contactez-nous dans les 48 h après réception : l'échange est possible (article non porté, dans son emballage).",
+    faq4q: "Comment se passe la confirmation ?", faq4r: "Après votre commande, notre équipe vous appelle pour confirmer la taille, la couleur et l'adresse. Le colis est ensuite expédié et vous payez au livreur à la réception.",
+    retour: "Retour à la boutique",
+    economie: "Économisez {x}", offreFin: "L'offre se termine dans", h: "h", min: "min", s: "s",
+    stockLimite: "Stock limité", stockReste: "Stock limité – plus que {n} pièces disponibles",
+    couleur: "Couleur", taille: "Taille", quantite: "Quantité", aChoisir: "à choisir",
+    conseilVet: "Coupe normale : prenez votre taille habituelle.", conseilCha: "Pointures européennes standard.",
+    formTitre: "Commandez maintenant", formSous: "Remplissez le formulaire, nous vous appelons pour confirmer.",
+    cod: "Paiement à la livraison – Vous payez seulement à la réception",
+    nom: "Nom complet", nomPh: "Ex : Mohamed Benali",
+    tel: "Téléphone", telPh: "05XX XX XX XX",
+    wilaya: "Wilaya", choisirWilaya: "Choisir la wilaya",
+    commune: "Commune", communePh: "Ex : Bab Ezzouar",
+    adresse: "Adresse", adressePh: "Quartier, rue, n° de maison…", facultatif: "(facultatif pour le stop desk)",
+    typeLiv: "Type de livraison",
+    domicile: "À domicile", bureau: "Au bureau (stop desk)",
+    domicileD: "Livré à votre porte", bureauD: "Retrait au bureau de livraison",
+    choisirWilayaCourt: "Choisir la wilaya", indisponible: "Indisponible ici",
+    recap: "Récapitulatif", rProduit: "Produit", rTaille: "Taille", rCouleur: "Couleur", rQte: "Quantité",
+    sousTotal: "Sous-total", livraison: "Livraison", total: "TOTAL",
+    confirmer: "Confirmer la commande", envoi: "Envoi en cours…",
+    securite: "Aucun paiement en ligne · Aucune création de compte",
+    livraisonRapide: "Livraison rapide 24 à 72 h", echange: "Échange de taille possible", appel: "Confirmation par téléphone",
+    stickyTotal: "Total", stickyBtn: "Commander maintenant",
+    errTaille: "Veuillez choisir une taille.", errNom: "Veuillez entrer votre nom complet.",
+    errTel: "Numéro invalide : 10 chiffres commençant par 05, 06 ou 07.",
+    errWilaya: "Veuillez choisir votre wilaya.", errCommune: "Veuillez entrer votre commune.",
+    errAdresse: "Veuillez entrer votre adresse.", errForm: "Veuillez corriger les champs en rouge.",
+    errReseau: "Problème de connexion. Vérifiez votre internet et réessayez.",
+    avisTitre: "Avis exemple", avisNote: "Avis fictifs, affichés uniquement pour la démonstration.", avisTag: "Exemple",
+    mTitre: "Merci ! Votre commande est enregistrée.", mTexte: "Nous allons vous appeler pour la confirmer.",
+    mNumero: "Commande n°", mTelInfo: "Gardez votre téléphone ({tel}) allumé : notre équipe vous appelle très bientôt.",
+    mRecap: "Récapitulatif de la commande", mClient: "Client", mTel: "Téléphone", mAdresse: "Livraison à",
+    mType: "Type de livraison", mPaiement: "Paiement", mPaiementV: "À la livraison (espèces)",
+    mRetour: "Continuer mes achats", mWa: "Une question ? WhatsApp",
+    footerTexte: "Vêtements et chaussures tendance, livrés dans les 58 wilayas. Paiement à la livraison.",
+    footerBoutique: "Boutique", footerAide: "Aide", footerSuivre: "Suivez-nous", faq: "FAQ", livraisonInfo: "Livraison & paiement",
+    footerDemo: "Site de démonstration – boutique fictive. Les produits, prix et avis sont des exemples.", droits: "Tous droits réservés.",
+    waMsg: "Bonjour {b}, j'ai une question.", waMsgProduit: "Bonjour {b}, je suis intéressé(e) par : {p}"
+  },
+  ar: {
+    demo: "موقع تجريبي – متجر وهمي",
+    navVet: "ملابس", navCha: "أحذية", navPromo: "تخفيضات",
+    langBtn: "Français", panier: "السلة", panierVide: "سلتك فارغة: اختر منتجاً.",
+    trust1: "التوصيل إلى 58 ولاية", trust2: "الدفع عند الاستلام", trust3: "استبدال المقاس",
+    catVoir: "شاهد الكل",
+    prodTitre: "الأكثر مبيعاً", prodSous: "استفد من أسعار التخفيض قبل نهاية العرض.",
+    filtreTous: "الكل", titrePromo: "تخفيضات اللحظة",
+    badgePromo: "تخفيض", acheter: "اشترِ الآن",
+    pourquoiTitre: "لماذا تختارنا؟",
+    p1t: "التوصيل إلى 58 ولاية", p1d: "نوصل إلى كل أنحاء الجزائر، إلى المنزل أو إلى مكتب التوصيل.",
+    p2t: "الدفع عند الاستلام", p2d: "لا دفع عبر الإنترنت: تدفع نقداً عند استلام الطرد.",
+    p3t: "إمكانية الاستبدال", p3d: "المقاس غير مناسب؟ نستبدله لك بسرعة.",
+    p4t: "خدمة الزبائن", p4d: "فريق متوفر عبر الهاتف وواتساب، 7 أيام على 7.",
+    faqTitre: "الأسئلة الشائعة",
+    faq1q: "ما هي مدة التوصيل؟", faq1r: "من 24 إلى 48 ساعة للعاصمة والمدن الكبرى، من 2 إلى 5 أيام لباقي الولايات، وحتى 7 أيام للجنوب الكبير.",
+    faq2q: "كم سعر التوصيل؟", faq2r: "يتغير السعر حسب ولايتك ونوع التوصيل (إلى المنزل أو إلى المكتب). يظهر تلقائياً في الاستمارة قبل التأكيد.",
+    faq3q: "هل يمكنني استبدال المقاس؟", faq3r: "نعم. إذا لم يناسبك المقاس، تواصل معنا خلال 48 ساعة من الاستلام: الاستبدال ممكن (منتج غير ملبوس وفي غلافه).",
+    faq4q: "كيف يتم تأكيد الطلب؟", faq4r: "بعد طلبك، يتصل بك فريقنا لتأكيد المقاس واللون والعنوان. ثم يُرسل الطرد وتدفع لعامل التوصيل عند الاستلام.",
+    retour: "العودة إلى المتجر",
+    economie: "وفّر {x}", offreFin: "ينتهي العرض خلال", h: "سا", min: "د", s: "ثا",
+    stockLimite: "الكمية محدودة", stockReste: "الكمية محدودة – بقيت {n} قطع فقط",
+    couleur: "اللون", taille: "المقاس", quantite: "الكمية", aChoisir: "اختر",
+    conseilVet: "قصة عادية: اختر مقاسك المعتاد.", conseilCha: "مقاسات أوروبية عادية.",
+    formTitre: "اطلب الآن", formSous: "املأ الاستمارة وسنتصل بك لتأكيد الطلب.",
+    cod: "الدفع عند الاستلام – تدفع فقط عند استلام طلبك",
+    nom: "الاسم الكامل", nomPh: "مثال: محمد بن علي",
+    tel: "رقم الهاتف", telPh: "05XX XX XX XX",
+    wilaya: "الولاية", choisirWilaya: "اختر الولاية",
+    commune: "البلدية", communePh: "مثال: باب الزوار",
+    adresse: "العنوان", adressePh: "الحي، الشارع، رقم المنزل…", facultatif: "(اختياري للتوصيل إلى المكتب)",
+    typeLiv: "نوع التوصيل",
+    domicile: "إلى المنزل", bureau: "إلى المكتب (ستوب ديسك)",
+    domicileD: "يصلك إلى باب منزلك", bureauD: "استلام من مكتب التوصيل",
+    choisirWilayaCourt: "اختر الولاية", indisponible: "غير متوفر هنا",
+    recap: "ملخص الطلب", rProduit: "المنتج", rTaille: "المقاس", rCouleur: "اللون", rQte: "الكمية",
+    sousTotal: "المجموع الفرعي", livraison: "التوصيل", total: "المجموع",
+    confirmer: "تأكيد الطلب", envoi: "جارٍ الإرسال…",
+    securite: "لا دفع عبر الإنترنت · لا حاجة لإنشاء حساب",
+    livraisonRapide: "توصيل سريع من 24 إلى 72 ساعة", echange: "إمكانية استبدال المقاس", appel: "تأكيد الطلب عبر الهاتف",
+    stickyTotal: "المجموع", stickyBtn: "اطلب الآن",
+    errTaille: "يرجى اختيار المقاس.", errNom: "يرجى إدخال اسمك الكامل.",
+    errTel: "رقم غير صحيح: 10 أرقام تبدأ بـ 05 أو 06 أو 07.",
+    errWilaya: "يرجى اختيار الولاية.", errCommune: "يرجى إدخال البلدية.",
+    errAdresse: "يرجى إدخال العنوان.", errForm: "يرجى تصحيح الخانات باللون الأحمر.",
+    errReseau: "مشكل في الاتصال. تحقق من الإنترنت وأعد المحاولة.",
+    avisTitre: "آراء للتوضيح (Avis exemple)", avisNote: "آراء وهمية معروضة للتوضيح فقط.", avisTag: "مثال",
+    mTitre: "شكراً! تم تسجيل طلبك.", mTexte: "سنتصل بك لتأكيده.",
+    mNumero: "رقم الطلب", mTelInfo: "أبقِ هاتفك ({tel}) مفتوحاً: سيتصل بك فريقنا قريباً.",
+    mRecap: "ملخص الطلب", mClient: "الزبون", mTel: "الهاتف", mAdresse: "التوصيل إلى",
+    mType: "نوع التوصيل", mPaiement: "الدفع", mPaiementV: "عند الاستلام (نقداً)",
+    mRetour: "مواصلة التسوق", mWa: "سؤال؟ واتساب",
+    footerTexte: "ملابس وأحذية عصرية، توصيل إلى 58 ولاية. الدفع عند الاستلام.",
+    footerBoutique: "المتجر", footerAide: "مساعدة", footerSuivre: "تابعنا", faq: "الأسئلة الشائعة", livraisonInfo: "التوصيل والدفع",
+    footerDemo: "موقع تجريبي – متجر وهمي. المنتجات والأسعار والآراء مجرد أمثلة.", droits: "جميع الحقوق محفوظة.",
+    waMsg: "مرحباً {b}، عندي سؤال.", waMsgProduit: "مرحباً {b}، أنا مهتم بـ: {p}"
+  }
+};
+function t(k, v) {
+  let s = (I18N[lang] && I18N[lang][k]) || I18N.fr[k] || k;
+  if (v) Object.keys(v).forEach(x => { s = s.split("{" + x + "}").join(v[x]); });
+  return s;
+}
+const tx = o => (o && typeof o === "object") ? (o[lang] || o.fr) : o;      // champ {fr, ar}
+const prix = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + tx(DEVISE);
+const remise = p => Math.round((1 - p.prix / p.ancienPrix) * 100);
+const nomWilaya = w => w[0] + " - " + (lang === "ar" ? w[2] : w[1]);
+
+function imgUrl(src, w) {
+  if (!/images\.unsplash\.com/.test(src)) return src;
+  try { const u = new URL(src); u.searchParams.set("w", w); if (u.searchParams.has("h")) u.searchParams.set("h", w); return u.toString(); }
+  catch (e) { return src; }
+}
+const img = (src, w, alt, extra) =>
+  `<img src="${imgUrl(src, w)}" alt="${esc(alt)}" width="${w}" height="${w}" ${extra || 'loading="lazy"'} decoding="async" onerror="this.onerror=null;this.src=window.IMG_SECOURS">`;
+
+/* ==================== Icônes ====================
+   Lucide (lucide.dev, licence ISC) pour l'interface,
+   Simple Icons (simpleicons.org, CC0) pour les logos des réseaux sociaux. */
+const ICONES = {
+  "truck": '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+  "banknote": '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+  "refresh-ccw": '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
+  "headset": '<path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/><path d="M21 16v2a4 4 0 0 1-4 4h-5"/>',
+  "lock": '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  "clock": '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  "info": '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  "phone": '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  "shopping-bag": '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  "check": '<path d="M20 6 9 17l-5-5"/>',
+  "circle-check": '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  "arrow-right": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+  "star": '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+  "shield-check": '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  "minus": '<path d="M5 12h14"/>',
+  "plus": '<path d="M5 12h14"/><path d="M12 5v14"/>',
+};
+const MARQUES = {
+  "facebook": "M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z",
+  "instagram": "M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077",
+  "tiktok": "M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z",
+  "whatsapp": "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z",
+};
+const ico = (nom, taille, classe) =>
+  `<svg class="ico${classe ? " " + classe : ""}" width="${taille || 18}" height="${taille || 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[nom]}</svg>`;
+const marque = (nom, taille) =>
+  `<svg class="ico" width="${taille || 18}" height="${taille || 18}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${MARQUES[nom]}"/></svg>`;
+const etoiles = n => [1, 2, 3, 4, 5].map(i =>
+  `<svg width="15" height="15" viewBox="0 0 24 24" fill="${i <= n ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">${ICONES.star}</svg>`).join("");
+
+/* ==================== État de la boutique ==================== */
+const etat = {
+  vue: null,            // "accueil" | "produit" | "merci"
+  filtre: "tous",
+  sel: null,            // sélection en cours sur la page produit
+  panier: null,         // { id, taille, couleur, qte }
+  form: { nom: "", tel: "", wilaya: "", commune: "", adresse: "", livraison: "domicile" },
+  atcEnvoye: false, icEnvoye: false, envoiEnCours: false,
+  derniereCommande: null,
+  allerA: null,         // "form" | "faq" | "produits" : défilement après affichage
+  scrollAccueil: 0,
+  obs: null
+};
+const produitCourant = () => etat.sel && PRODUITS.find(p => p.id === etat.sel.id);
+
+/* ==================== En-tête / pied de page ==================== */
+function logoHtml() {
+  const mots = NOM_BOUTIQUE.trim().split(/\s+/);
+  const fin = mots.length > 1 ? " " + mots.pop() : "";
+  return esc(mots.join(" ")) + (fin ? "<i>" + esc(fin) + "</i>" : "<i>.</i>");
+}
+function lienWhatsApp(p) {
+  const msg = p ? t("waMsgProduit", { b: NOM_BOUTIQUE, p: tx(p.nom) }) : t("waMsg", { b: NOM_BOUTIQUE });
+  return "https://wa.me/" + String(WHATSAPP_NUMERO).replace(/\D/g, "") + "?text=" + encodeURIComponent(msg);
+}
+function renderEntete() {
+  $("#demo-bar").textContent = t("demo");
+  $("#promo-bar").innerHTML = ico("truck", 16) + "<span>" + esc(tx(BANDEAU_PROMO)) + "</span>";
+  $("#header").innerHTML = `
+    <a class="logo" href="#/" aria-label="${esc(NOM_BOUTIQUE)}">${logoHtml()}</a>
+    <nav class="nav" aria-label="Menu">
+      <a href="#/vetements" data-nav="vetements">${t("navVet")}</a>
+      <a href="#/chaussures" data-nav="chaussures">${t("navCha")}</a>
+      <a href="#/promos" data-nav="promos" class="promo">${t("navPromo")}</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn-lang" data-act="lang" lang="${lang === "fr" ? "ar" : "fr"}">${t("langBtn")}</button>
+      <button class="btn-cart" data-act="panier" aria-label="${t("panier")}">${ico("shopping-bag", 21)}<span class="cart-badge" id="cart-badge" hidden></span></button>
+    </div>`;
+  majBadge();
+  majNavActive();
+}
+function majNavActive() {
+  const h = location.hash.replace("#/", "");
+  $$("[data-nav]").forEach(a => a.classList.toggle("on", a.dataset.nav === h));
+}
+function renderPied() {
+  $("#footer").innerHTML = `
+    <div class="footer-grid">
+      <div>
+        <a class="logo" href="#/">${logoHtml()}</a>
+        <p>${t("footerTexte")}</p>
+      </div>
+      <div>
+        <h4>${t("footerBoutique")}</h4>
+        <ul>
+          <li><a href="#/vetements">${t("navVet")}</a></li>
+          <li><a href="#/chaussures">${t("navCha")}</a></li>
+          <li><a href="#/promos">${t("navPromo")}</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>${t("footerAide")}</h4>
+        <ul>
+          <li><button data-act="faq">${t("faq")}</button></li>
+          <li><button data-act="faq">${t("livraisonInfo")}</button></li>
+          <li><a class="tel-link" href="tel:${esc(TELEPHONE_AFFICHE.replace(/\s/g, ""))}">${ico("phone", 15)}<span dir="ltr">${esc(TELEPHONE_AFFICHE)}</span></a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>${t("footerSuivre")}</h4>
+        <div class="socials">
+          <a href="${esc(RESEAUX_SOCIAUX.facebook)}" target="_blank" rel="noopener" aria-label="Facebook">${marque("facebook")}</a>
+          <a href="${esc(RESEAUX_SOCIAUX.instagram)}" target="_blank" rel="noopener" aria-label="Instagram">${marque("instagram")}</a>
+          <a href="${esc(RESEAUX_SOCIAUX.tiktok)}" target="_blank" rel="noopener" aria-label="TikTok">${marque("tiktok")}</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© ${new Date().getFullYear()} ${esc(NOM_BOUTIQUE)}. ${t("droits")}</span>
+      <span>${t("footerDemo")}</span>
+    </div>`;
+}
+function majWhatsApp() {
+  const wa = $("#wa");
+  wa.href = lienWhatsApp(etat.vue === "produit" ? produitCourant() : null);
+  wa.setAttribute("aria-label", "WhatsApp");
+}
+function majBadge() {
+  const b = $("#cart-badge");
+  if (!b) return;
+  if (etat.panier) { b.textContent = etat.panier.qte; b.hidden = false; } else b.hidden = true;
+}
+
+/* ==================== Blocs réutilisables ==================== */
+function htmlCarte(p, i) {
+  return `
+  <a class="card" href="#/produit/${p.id}">
+    <div class="card-img">
+      ${img(p.photos[0], 500, tx(p.nom), i < 2 ? 'fetchpriority="high"' : 'loading="lazy"')}
+      <span class="badge">${t("badgePromo")}</span>
+      <span class="badge-pct">-${remise(p)}%</span>
+    </div>
+    <div class="card-body">
+      <div class="card-name">${esc(tx(p.nom))}</div>
+      <div class="prices"><span class="price-new">${prix(p.prix)}</span><span class="price-old">${prix(p.ancienPrix)}</span></div>
+      <span class="card-btn">${t("acheter")}</span>
+    </div>
+  </a>`;
+}
+function htmlFaq() {
+  return `
+  <section class="section faq" id="faq">
+    <div class="section-head"><h2>${t("faqTitre")}</h2></div>
+    ${[1, 2, 3, 4].map(i => `<details${i === 1 ? " open" : ""}><summary><span>${t("faq" + i + "q")}</span>${ico("chevron-down", 20, "chev")}</summary><p>${t("faq" + i + "r")}</p></details>`).join("")}
+  </section>`;
+}
+function htmlPourquoi() {
+  const items = [["truck", 1], ["banknote", 2], ["refresh-ccw", 3], ["headset", 4]];
+  return `
+  <section class="section">
+    <div class="section-head"><h2>${t("pourquoiTitre")}</h2></div>
+    <div class="why">
+      ${items.map(([nomIco, i]) => `<div class="why-item"><div class="why-ico">${ico(nomIco, 24)}</div><b>${t("p" + i + "t")}</b><p>${t("p" + i + "d")}</p></div>`).join("")}
+    </div>
+  </section>`;
+}
+
+/* ==================== PAGE D'ACCUEIL ==================== */
+function produitsFiltres() {
+  if (etat.filtre === "vetements" || etat.filtre === "chaussures") return PRODUITS.filter(p => p.categorie === etat.filtre);
+  if (etat.filtre === "promos") return PRODUITS.slice().sort((a, b) => remise(b) - remise(a));
+  return PRODUITS;
+}
+function htmlGrille() {
+  const titres = { tous: t("prodTitre"), vetements: t("navVet"), chaussures: t("navCha"), promos: t("titrePromo") };
+  const chips = [["tous", t("filtreTous")], ["vetements", t("navVet")], ["chaussures", t("navCha")], ["promos", t("navPromo")]];
+  return `
+    <div class="section-head"><h2>${titres[etat.filtre]}</h2><p>${t("prodSous")}</p></div>
+    <div class="chips" role="tablist">
+      ${chips.map(([k, l]) => `<button class="chip ${etat.filtre === k ? "on" : ""}" data-act="filtre" data-v="${k}" role="tab" aria-selected="${etat.filtre === k}">${l}</button>`).join("")}
+    </div>
+    <div class="grid">${produitsFiltres().map(htmlCarte).join("")}</div>`;
+}
+function pageAccueil() {
+  etat.vue = "accueil";
+  document.title = NOM_BOUTIQUE + " – " + (lang === "ar" ? "ملابس وأحذية – الدفع عند الاستلام" : "Vêtements & chaussures – Paiement à la livraison");
+  const pv = PRODUITS.find(p => p.categorie === "vetements"), pc = PRODUITS.find(p => p.categorie === "chaussures");
+  app.innerHTML = `
+    <section class="hero">
+      <img src="${esc(BANNIERE.image)}" alt="" fetchpriority="high" onerror="this.style.display='none'">
+      <div class="hero-content">
+        <span class="hero-tag">${esc(tx(BANNIERE.etiquette))}</span>
+        <h1>${esc(tx(BANNIERE.titre))}</h1>
+        <p>${esc(tx(BANNIERE.texte))}</p>
+        <a class="btn btn-blanc" href="#/promos">${t("acheter")} ${ico("arrow-right", 18, "flip")}</a>
+      </div>
+    </section>
+    <div class="trust">
+      <span>${ico("truck")}${t("trust1")}</span><span>${ico("banknote")}${t("trust2")}</span><span>${ico("refresh-ccw")}${t("trust3")}</span>
+    </div>
+    <div class="cats">
+      <a class="cat" href="#/vetements">${img(pv.photos[1] || pv.photos[0], 600, t("navVet"))}<div><b>${t("navVet")}</b><small>${t("catVoir")} ${ico("arrow-right", 14, "flip")}</small></div></a>
+      <a class="cat" href="#/chaussures">${img(pc.photos[0], 600, t("navCha"))}<div><b>${t("navCha")}</b><small>${t("catVoir")} ${ico("arrow-right", 14, "flip")}</small></div></a>
+    </div>
+    <section class="section" id="produits">${htmlGrille()}</section>
+    ${htmlPourquoi()}
+    ${htmlFaq()}`;
+}
+
+/* ==================== PAGE PRODUIT ==================== */
+function htmlOptions(p) {
+  const s = etat.sel, tailles = TAILLES[p.categorie] || [];
+  return `
+    <div>
+      <div class="opt-label">${t("couleur")} : <b>${esc(tx(p.couleurs[s.couleur]))}</b></div>
+      <div class="opt-list">${p.couleurs.map((c, i) => `<button type="button" class="opt ${i === s.couleur ? "on" : ""}" data-act="couleur" data-i="${i}" aria-pressed="${i === s.couleur}"><span class="dot" style="background:${esc(c.hex)}"></span>${esc(tx(c))}</button>`).join("")}</div>
+    </div>
+    <div id="grp-taille">
+      <div class="opt-label">${t("taille")} : <b>${s.taille ? esc(s.taille) : '<span class="muted">' + t("aChoisir") + "</span>"}</b></div>
+      <div class="opt-list">${tailles.map(tl => `<button type="button" class="opt opt-size ${tl === s.taille ? "on" : ""}" data-act="taille" data-v="${tl}" aria-pressed="${tl === s.taille}">${tl}</button>`).join("")}</div>
+      <small class="hint">${t(p.categorie === "vetements" ? "conseilVet" : "conseilCha")}</small>
+      <small class="err-msg" data-err="taille"></small>
+    </div>
+    <div>
+      <div class="opt-label">${t("quantite")}</div>
+      <div class="qty"><button type="button" data-act="moins" aria-label="-">${ico("minus", 18)}</button><span>${s.qte}</span><button type="button" data-act="plus" aria-label="+">${ico("plus", 18)}</button></div>
+    </div>`;
+}
+function htmlLivraisonOptions() {
+  const f = etat.form;
+  return ["domicile", "bureau"].map(type => `
+    <label data-liv="${type}" class="${f.livraison === type ? "on" : ""}">
+      <input type="radio" name="livraison" value="${type}" ${f.livraison === type ? "checked" : ""}>
+      <b>${t(type)}</b><small>${t(type + "D")}</small><em data-liv-prix="${type}"></em>
+    </label>`).join("");
+}
+function pageProduit(id, garder) {
+  const p = PRODUITS.find(x => x.id === id);
+  if (!p) { location.replace("#/"); return; }
+  if (!garder || !etat.sel || etat.sel.id !== id) {
+    const depuisPanier = etat.panier && etat.panier.id === id;
+    etat.sel = depuisPanier
+      ? { id, taille: etat.panier.taille, couleur: etat.panier.couleur, qte: etat.panier.qte, photo: 0 }
+      : { id, taille: null, couleur: 0, qte: 1, photo: 0 };
+    etat.atcEnvoye = !!depuisPanier;
+    etat.icEnvoye = false;
+    garder = false;
+  }
+  etat.vue = "produit";
+  document.title = tx(p.nom) + " – " + NOM_BOUTIQUE;
+  const f = etat.form, s = etat.sel;
+  const stockPct = Math.max(8, Math.min(100, Math.round((p.stock || 5) / 30 * 100)));
+
+  app.innerHTML = `
+    <a class="back" href="#/">${ico("arrow-left", 16, "flip")}${t("retour")}</a>
+    <div class="pp">
+      <div class="gallery">
+        <div class="g-main" id="g-main">
+          ${img(p.photos[s.photo], 900, tx(p.nom), 'fetchpriority="high" id="g-img"')}
+          <span class="g-count" id="g-count">${s.photo + 1} / ${p.photos.length}</span>
+          <span class="badge">${t("badgePromo")} -${remise(p)}%</span>
+        </div>
+        <div class="g-thumbs">
+          ${p.photos.map((ph, i) => `<button type="button" class="${i === s.photo ? "on" : ""}" data-act="photo" data-i="${i}" aria-label="Photo ${i + 1}">${img(ph, 200, "")}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="info">
+        <h1 class="p-title">${esc(tx(p.nom))}</h1>
+        <div class="p-prices">
+          <span class="price-new">${prix(p.prix)}</span>
+          <span class="price-old">${prix(p.ancienPrix)}</span>
+          <span class="pill-save">${t("economie", { x: prix(p.ancienPrix - p.prix) })}</span>
+        </div>
+        <p class="p-desc">${esc(tx(p.description))}</p>
+
+        <div class="urgence">
+          <div class="cd-row">
+            <span>${ico("clock", 17)}${t("offreFin")}</span>
+            <div class="cd js-cd">
+              <div><b data-h>00</b><small>${t("h")}</small></div>
+              <div><b data-m>00</b><small>${t("min")}</small></div>
+              <div><b data-s>00</b><small>${t("s")}</small></div>
+            </div>
+          </div>
+          <div class="stock"><i class="live-dot"></i>${p.stock ? t("stockReste", { n: p.stock }) : t("stockLimite")}</div>
+          <div class="stock-bar"><i style="width:${stockPct}%"></i></div>
+        </div>
+
+        <div class="opts" id="options">${htmlOptions(p)}</div>
+
+        <form class="order" id="form-commande" novalidate>
+          <h2>${t("formTitre")}</h2>
+          <p>${t("formSous")}</p>
+          <div class="cod">${ico("banknote", 22)}<span>${t("cod")}</span></div>
+
+          <div class="fields">
+            <div class="field full" data-f="nom">
+              <label for="f-nom">${t("nom")} *</label>
+              <input id="f-nom" name="nom" autocomplete="name" placeholder="${esc(t("nomPh"))}" value="${esc(f.nom)}" maxlength="80">
+              <small class="err-msg" data-err="nom"></small>
+            </div>
+            <div class="field full" data-f="tel">
+              <label for="f-tel">${t("tel")} *</label>
+              <input id="f-tel" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="${t("telPh")}" value="${esc(f.tel)}" maxlength="16">
+              <small class="err-msg" data-err="tel"></small>
+            </div>
+            <div class="field half" data-f="wilaya">
+              <label for="f-wilaya">${t("wilaya")} *</label>
+              <select id="f-wilaya" name="wilaya">
+                <option value="">${t("choisirWilaya")}</option>
+                ${PRIX_LIVRAISON.map(w => `<option value="${w[0]}" ${f.wilaya === w[0] ? "selected" : ""}>${esc(nomWilaya(w))}</option>`).join("")}
+              </select>
+              <small class="err-msg" data-err="wilaya"></small>
+            </div>
+            <div class="field half" data-f="commune">
+              <label for="f-commune">${t("commune")} *</label>
+              <input id="f-commune" name="commune" autocomplete="address-level2" placeholder="${esc(t("communePh"))}" value="${esc(f.commune)}" maxlength="60">
+              <small class="err-msg" data-err="commune"></small>
+            </div>
+            <div class="field full" data-f="adresse">
+              <label for="f-adresse">${t("adresse")} <span id="adresse-req">*</span> <small id="adresse-opt" hidden>${t("facultatif")}</small></label>
+              <input id="f-adresse" name="adresse" autocomplete="street-address" placeholder="${esc(t("adressePh"))}" value="${esc(f.adresse)}" maxlength="150">
+              <small class="err-msg" data-err="adresse"></small>
+            </div>
+          </div>
+
+          <div class="liv-title">${t("typeLiv")}</div>
+          <div class="liv" id="liv">${htmlLivraisonOptions()}</div>
+
+          <div class="recap" id="recap"></div>
+
+          <button type="submit" class="btn btn-succes btn-confirm" id="btn-confirm">${t("confirmer")}</button>
+          <p class="secure">${ico("lock", 14)}${t("securite")}</p>
+        </form>
+
+        <div class="mini-trust">
+          <span>${ico("truck")}${t("livraisonRapide")}</span>
+          <span>${ico("refresh-ccw")}${t("echange")}</span>
+          <span>${ico("phone")}${t("appel")}</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="section-head"><h2>${t("avisTitre")}</h2><span class="note-ex">${ico("info", 15)}${t("avisNote")}</span></div>
+      <div class="reviews">
+        ${AVIS_EXEMPLE.map(a => `
+          <div class="review">
+            <div class="review-head">
+              <div class="avatar">${esc(a.nom.charAt(0))}</div>
+              <div><b>${esc(a.nom)}</b><small>${esc(tx(a.ville))}</small></div>
+              <span class="tag-ex">${t("avisTag")}</span>
+            </div>
+            <div class="stars" role="img" aria-label="${a.note}/5">${etoiles(a.note)}</div>
+            <p>${esc(tx(a.texte))}</p>
+          </div>`).join("")}
+      </div>
+    </section>
+
+    ${htmlFaq()}
+
+    <div class="sticky-cta" id="sticky">
+      <div><small>${t("stickyTotal")}</small><b class="js-total"></b></div>
+      <button type="button" class="btn btn-accent" data-act="vers-form">${t("stickyBtn")}</button>
+    </div>`;
+
+  majLivraisonUI();
+  majRecap();
+  majCompteRebours();
+  activerSticky();
+  activerSwipe(p);
+  $("#form-commande").addEventListener("submit", soumettre);
+  if (!garder) suivre("ViewContent", donneesPixel(p, 1, p.prix));
+}
+
+/* --- Galerie --- */
+function afficherPhoto(i) {
+  const p = produitCourant(); if (!p) return;
+  const n = p.photos.length;
+  etat.sel.photo = (i + n) % n;
+  const im = $("#g-img");
+  im.src = imgUrl(p.photos[etat.sel.photo], 900);
+  $("#g-count").textContent = (etat.sel.photo + 1) + " / " + n;
+  $$(".g-thumbs button").forEach((b, k) => b.classList.toggle("on", k === etat.sel.photo));
+}
+function activerSwipe() {
+  const zone = $("#g-main"); let x0 = null;
+  zone.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, { passive: true });
+  zone.addEventListener("touchend", e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) < 40) return;
+    const sens = (dx < 0 ? 1 : -1) * (lang === "ar" ? -1 : 1);
+    afficherPhoto(etat.sel.photo + sens);
+  });
+}
+
+/* --- Livraison & récapitulatif --- */
+const wilayaChoisie = () => PRIX_LIVRAISON.find(w => w[0] === etat.form.wilaya) || null;
+function fraisLivraison() {
+  const w = wilayaChoisie(); if (!w) return null;
+  const v = etat.form.livraison === "bureau" ? w[4] : w[3];
+  return (v === null || v === undefined) ? null : Number(v);
+}
+function majLivraisonUI() {
+  const w = wilayaChoisie();
+  const bureauDispo = !w || (w[4] !== null && w[4] !== undefined);
+  if (!bureauDispo && etat.form.livraison === "bureau") etat.form.livraison = "domicile";
+  $$("#liv label").forEach(l => {
+    const type = l.dataset.liv, input = $("input", l);
+    const off = type === "bureau" && !bureauDispo;
+    input.disabled = off;
+    input.checked = etat.form.livraison === type;
+    l.classList.toggle("off", off);
+    l.classList.toggle("on", input.checked);
+    const v = w ? (type === "bureau" ? w[4] : w[3]) : undefined;
+    $("[data-liv-prix]", l).textContent = !w ? t("choisirWilayaCourt") : (v === null || v === undefined) ? t("indisponible") : prix(v);
+  });
+  const opt = etat.form.livraison === "bureau";
+  $("#adresse-req").hidden = opt;
+  $("#adresse-opt").hidden = !opt;
+}
+function totaux() {
+  const p = produitCourant(), s = etat.sel;
+  const sousTotal = p.prix * s.qte, frais = fraisLivraison();
+  return { sousTotal, frais, total: sousTotal + (frais || 0) };
+}
+function majRecap() {
+  const p = produitCourant(); if (!p) return;
+  const s = etat.sel, tt = totaux();
+  const r = $("#recap");
+  if (r) r.innerHTML = `
+    <h3>${t("recap")}</h3>
+    <div class="row"><span>${t("rProduit")}</span><span>${esc(tx(p.nom))}</span></div>
+    <div class="row"><span>${t("rTaille")}</span><span>${s.taille ? esc(s.taille) : '<span class="muted">' + t("aChoisir") + "</span>"}</span></div>
+    <div class="row"><span>${t("rCouleur")}</span><span>${esc(tx(p.couleurs[s.couleur]))}</span></div>
+    <div class="row"><span>${t("rQte")}</span><span>${s.qte} × ${prix(p.prix)}</span></div>
+    <div class="sep"></div>
+    <div class="row"><span>${t("sousTotal")}</span><span>${prix(tt.sousTotal)}</span></div>
+    <div class="row"><span>${t("livraison")}</span><span>${tt.frais === null ? '<span class="muted">' + t("choisirWilayaCourt") + "</span>" : prix(tt.frais)}</span></div>
+    <div class="sep"></div>
+    <div class="row total"><span>${t("total")}</span><span>${prix(tt.total)}</span></div>`;
+  $$(".js-total").forEach(e => { e.textContent = prix(tt.total); });
+}
+function majOptions() {
+  const p = produitCourant(); if (!p) return;
+  $("#options").innerHTML = htmlOptions(p);
+  majRecap();
+}
+
+/* --- Panier & pixels --- */
+function donneesPixel(p, qte, valeur) {
+  return { id: p.id, nom: p.nom.fr, prix: p.prix, quantite: qte, valeur: valeur };
+}
+function ajouterAuPanier() {
+  const p = produitCourant(), s = etat.sel;
+  etat.panier = { id: p.id, taille: s.taille, couleur: s.couleur, qte: s.qte };
+  majBadge();
+  if (!etat.atcEnvoye) {
+    etat.atcEnvoye = true;
+    suivre("AddToCart", donneesPixel(p, s.qte, p.prix * s.qte));
+  }
+}
+function ouvrirPanier() {
+  if (!etat.panier) {
+    toast(t("panierVide"));
+    if (etat.vue === "accueil") $("#produits").scrollIntoView({ behavior: "smooth" });
+    else { etat.allerA = "produits"; location.hash = "#/"; }
+    return;
+  }
+  if (etat.vue === "produit" && etat.sel.id === etat.panier.id) allerAuFormulaire();
+  else { etat.allerA = "form"; location.hash = "#/produit/" + etat.panier.id; }
+}
+function allerAuFormulaire() {
+  const cible = etat.sel && !etat.sel.taille ? $("#grp-taille") : $("#form-commande");
+  if (cible) cible.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (etat.sel && !etat.sel.taille) afficherErreurs({ taille: t("errTaille") });
+}
+
+/* --- Bouton collant (mobile) --- */
+function activerSticky() {
+  const sticky = $("#sticky"), form = $("#form-commande");
+  if (!("IntersectionObserver" in window)) { sticky.classList.add("show"); document.body.classList.add("sticky-on"); return; }
+  etat.obs = new IntersectionObserver(entries => {
+    const visible = entries[0].isIntersecting;
+    sticky.classList.toggle("show", !visible);
+    document.body.classList.toggle("sticky-on", !visible);
+  }, { threshold: 0.12 });
+  etat.obs.observe(form);
+}
+
+/* ==================== Formulaire : saisie, validation, envoi ==================== */
+function normaliserTel(v) {
+  let d = String(v || "").replace(/\D/g, "");
+  if (d.indexOf("00213") === 0) d = d.slice(5);
+  else if (d.indexOf("213") === 0 && d.length === 12) d = d.slice(3);
+  if (d.length === 9 && /^[567]/.test(d)) d = "0" + d;
+  return d;
+}
+const telValide = v => /^0[567]\d{8}$/.test(normaliserTel(v));
+
+function afficherErreurs(err) {
+  Object.keys(err).forEach(k => {
+    const m = $('[data-err="' + k + '"]'); if (m) m.textContent = err[k];
+    const f = $('[data-f="' + k + '"]'); if (f) f.classList.add("err");
+    if (k === "taille") { const g = $("#grp-taille"); if (g) g.classList.add("grp-err"); }
+  });
+}
+function effacerErreur(k) {
+  const m = $('[data-err="' + k + '"]'); if (m) m.textContent = "";
+  const f = $('[data-f="' + k + '"]'); if (f) f.classList.remove("err");
+}
+function validerFormulaire() {
+  const f = etat.form, err = {};
+  if (!etat.sel.taille) err.taille = t("errTaille");
+  if (f.nom.trim().length < 3) err.nom = t("errNom");
+  if (!telValide(f.tel)) err.tel = t("errTel");
+  if (!f.wilaya) err.wilaya = t("errWilaya");
+  if (f.commune.trim().length < 2) err.commune = t("errCommune");
+  if (f.livraison === "domicile" && f.adresse.trim().length < 4) err.adresse = t("errAdresse");
+  return err;
+}
+
+function surSaisie(e) {
+  const el = e.target;
+  if (!el.closest || !el.closest("#form-commande")) return;
+  const n = el.name;
+  if (!(n in etat.form)) return;
+  if (el.type === "radio" && !el.checked) return;
+  etat.form[n] = el.value;
+  effacerErreur(n);
+  if (n === "wilaya" || n === "livraison") {
+    majLivraisonUI(); majRecap();
+    if (n === "livraison") effacerErreur("adresse");
+  }
+}
+document.addEventListener("input", surSaisie);
+document.addEventListener("change", surSaisie);
+
+/* InitiateCheckout : une seule fois, dès que le client commence à remplir le formulaire */
+function debutCommande(e) {
+  if (etat.icEnvoye || !e.target.closest || !e.target.closest("#form-commande")) return;
+  if (!/^(INPUT|SELECT)$/.test(e.target.tagName)) return;
+  etat.icEnvoye = true;
+  const p = produitCourant();
+  suivre("InitiateCheckout", donneesPixel(p, etat.sel.qte, totaux().total));
+}
+document.addEventListener("focusin", debutCommande);
+document.addEventListener("input", debutCommande, true);
+document.addEventListener("focusout", e => {
+  if (e.target.name === "tel" && e.target.closest("#form-commande") && e.target.value.trim() && !telValide(e.target.value))
+    afficherErreurs({ tel: t("errTel") });
+});
+
+async function envoyerVersGoogleSheet(donnees) {
+  const url = (GOOGLE_SHEET_URL || "").trim();
+  if (!/^https:\/\//i.test(url)) {
+    console.info("%c[Démo] GOOGLE_SHEET_URL non renseignée : la commande n'est pas envoyée.", "color:#16A34A;font-weight:bold", donnees);
+    return "demo";
+  }
+  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const minuteur = setTimeout(() => { if (ctrl) ctrl.abort(); }, 10000);
+  try {
+    // "no-cors" + text/plain : évite les blocages CORS d'Apps Script
+    await fetch(url, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(donnees),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    return "ok";
+  } catch (err) {
+    // Délai dépassé : la requête est très probablement arrivée → on continue.
+    if (err && err.name === "AbortError") return "ok";
+    console.warn("Envoi Google Sheet impossible :", err);
+    return "erreur";
+  } finally { clearTimeout(minuteur); }
+}
+
+const dateFr = d => pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+
+async function soumettre(e) {
+  e.preventDefault();
+  if (etat.envoiEnCours) return;
+  // Récupère les valeurs (au cas où le navigateur a pré-rempli les champs)
+  ["nom", "tel", "wilaya", "commune", "adresse"].forEach(n => { const el = $('#form-commande [name="' + n + '"]'); if (el) etat.form[n] = el.value; });
+
+  const err = validerFormulaire();
+  if (Object.keys(err).length) {
+    afficherErreurs(err);
+    toast(t("errForm"), true);
+    const ordre = ["taille", "nom", "tel", "wilaya", "commune", "adresse"];
+    const premier = ordre.find(k => err[k]);
+    const cible = premier === "taille" ? $("#grp-taille") : $('[data-f="' + premier + '"]');
+    if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+    const champ = premier !== "taille" && $('#form-commande [name="' + premier + '"]');
+    if (champ) setTimeout(() => champ.focus({ preventScroll: true }), 350);
+    return;
+  }
+
+  const p = produitCourant(), s = etat.sel, f = etat.form, w = wilayaChoisie(), tt = totaux();
+  const numero = "CMD-" + Date.now().toString().slice(-6) + Math.floor(10 + Math.random() * 90);
+  const commande = {
+    numero: numero,
+    date: dateFr(new Date()),
+    nom: f.nom.trim(),
+    telephone: normaliserTel(f.tel),
+    wilaya: w[0] + " - " + w[1],
+    commune: f.commune.trim(),
+    adresse: f.adresse.trim(),
+    livraison: f.livraison === "bureau" ? "Au bureau (stop desk)" : "À domicile",
+    produit: p.nom.fr,
+    taille: s.taille,
+    couleur: p.couleurs[s.couleur].fr,
+    quantite: s.qte,
+    prixUnitaire: p.prix,
+    sousTotal: tt.sousTotal,
+    fraisLivraison: tt.frais || 0,
+    total: tt.total,
+    boutique: NOM_BOUTIQUE,
+    langue: lang
+  };
+
+  etat.envoiEnCours = true;
+  const btn = $("#btn-confirm");
+  btn.disabled = true; btn.textContent = t("envoi");
+
+  const resultat = await envoyerVersGoogleSheet(commande);
+  etat.envoiEnCours = false;
+  if (resultat === "erreur") {
+    btn.disabled = false; btn.textContent = t("confirmer");
+    toast(t("errReseau"), true);
+    return;
+  }
+
+  suivre("Purchase", donneesPixel(p, s.qte, tt.total), numero);
+
+  etat.derniereCommande = { c: commande, pid: p.id, couleur: s.couleur, wilaya: w, type: f.livraison };
+  etat.panier = null;
+  etat.form = { nom: "", tel: "", wilaya: "", commune: "", adresse: "", livraison: "domicile" };
+  majBadge();
+  location.hash = "#/merci";
+}
+
+/* ==================== PAGE MERCI ==================== */
+function pageMerci() {
+  const d = etat.derniereCommande;
+  if (!d) { location.replace("#/"); return; }
+  etat.vue = "merci";
+  const p = PRODUITS.find(x => x.id === d.pid), c = d.c;
+  document.title = t("mTitre") + " – " + NOM_BOUTIQUE;
+  app.innerHTML = `
+    <section class="merci">
+      <div class="merci-ico">${ico("check", 36)}</div>
+      <h1>${t("mTitre")}</h1>
+      <p class="lead">${t("mTexte")}</p>
+      <span class="num">${t("mNumero")} <span dir="ltr">${esc(c.numero)}</span></span>
+      <div class="recap">
+        <h3>${t("mRecap")}</h3>
+        <div class="row"><span>${t("rProduit")}</span><span>${esc(tx(p.nom))}</span></div>
+        <div class="row"><span>${t("rTaille")} / ${t("rCouleur")}</span><span>${esc(c.taille)} / ${esc(tx(p.couleurs[d.couleur]))}</span></div>
+        <div class="row"><span>${t("rQte")}</span><span>${c.quantite} × ${prix(c.prixUnitaire)}</span></div>
+        <div class="sep"></div>
+        <div class="row"><span>${t("mClient")}</span><span>${esc(c.nom)}</span></div>
+        <div class="row"><span>${t("mTel")}</span><span dir="ltr">${esc(c.telephone)}</span></div>
+        <div class="row"><span>${t("mAdresse")}</span><span>${esc(nomWilaya(d.wilaya))}, ${esc(c.commune)}${c.adresse ? "<br>" + esc(c.adresse) : ""}</span></div>
+        <div class="row"><span>${t("mType")}</span><span>${t(d.type)}</span></div>
+        <div class="row"><span>${t("mPaiement")}</span><span>${t("mPaiementV")}</span></div>
+        <div class="sep"></div>
+        <div class="row"><span>${t("sousTotal")}</span><span>${prix(c.sousTotal)}</span></div>
+        <div class="row"><span>${t("livraison")}</span><span>${prix(c.fraisLivraison)}</span></div>
+        <div class="row total"><span>${t("total")}</span><span>${prix(c.total)}</span></div>
+      </div>
+      <p class="info-tel">${ico("phone", 17)}<span>${t("mTelInfo", { tel: '<span dir="ltr">' + esc(c.telephone) + "</span>" })}</span></p>
+      <div class="merci-btns">
+        <a class="btn btn-accent" href="#/">${t("mRetour")}</a>
+        <a class="btn btn-blanc" style="border:1.5px solid var(--c-bord)" href="${lienWhatsApp()}" target="_blank" rel="noopener">${t("mWa")}</a>
+      </div>
+    </section>`;
+}
+
+/* ==================== Compte à rebours (jusqu'à minuit) ==================== */
+function majCompteRebours() {
+  const els = $$(".js-cd"); if (!els.length) return;
+  const now = new Date(), fin = new Date(now);
+  fin.setHours(24, 0, 0, 0);
+  const sec = Math.max(0, Math.floor((fin - now) / 1000));
+  const h = pad(Math.floor(sec / 3600)), m = pad(Math.floor(sec % 3600 / 60)), s = pad(sec % 60);
+  els.forEach(el => { $("[data-h]", el).textContent = h; $("[data-m]", el).textContent = m; $("[data-s]", el).textContent = s; });
+}
+setInterval(majCompteRebours, 1000);
+
+/* ==================== Toast ==================== */
+let toastTimer;
+function toast(msg, erreur) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.toggle("err", !!erreur);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+/* ==================== Clics (délégation) ==================== */
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]");
+  if (a) {
+    const act = a.dataset.act, p = produitCourant();
+    switch (act) {
+      case "lang": changerLangue(); break;
+      case "panier": ouvrirPanier(); break;
+      case "photo": afficherPhoto(+a.dataset.i); break;
+      case "couleur":
+        etat.sel.couleur = +a.dataset.i; majOptions();
+        if (etat.panier && etat.panier.id === p.id) etat.panier.couleur = etat.sel.couleur;
+        break;
+      case "taille":
+        etat.sel.taille = a.dataset.v; majOptions(); ajouterAuPanier(); break;
+      case "moins":
+      case "plus": {
+        const max = Math.min(p.stock || 10, 10);
+        etat.sel.qte = Math.max(1, Math.min(max, etat.sel.qte + (act === "plus" ? 1 : -1)));
+        majOptions(); ajouterAuPanier(); break;
+      }
+      case "vers-form": allerAuFormulaire(); break;
+      case "filtre":
+        etat.filtre = a.dataset.v;
+        $("#produits").innerHTML = htmlGrille();
+        break;
+      case "faq":
+        if ($("#faq")) $("#faq").scrollIntoView({ behavior: "smooth" });
+        else { etat.allerA = "faq"; location.hash = "#/"; }
+        break;
+    }
+    return;
+  }
+  // Re-clic sur le lien de la page déjà ouverte → on ré-affiche quand même
+  const lien = e.target.closest('a[href^="#/"]');
+  if (lien && lien.getAttribute("href") === location.hash) { e.preventDefault(); router(); }
+});
+
+/* ==================== Langue ==================== */
+function appliquerLangue() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  renderEntete();
+  renderPied();
+}
+function changerLangue() {
+  lang = lang === "fr" ? "ar" : "fr";
+  try { localStorage.setItem("boutique_lang", lang); } catch (e) {}
+  const y = window.scrollY;
+  appliquerLangue();
+  router(true);
+  window.scrollTo(0, y);
+}
+
+/* ==================== Routeur (#/ , #/produit/id , #/merci ...) ==================== */
+function router(rerendu) {
+  rerendu = rerendu === true;
+  if (etat.obs) { etat.obs.disconnect(); etat.obs = null; }
+  document.body.classList.remove("sticky-on");
+  if (!rerendu) $("#toast").classList.remove("show");
+  const ancienneVue = etat.vue;
+  if (ancienneVue === "accueil" && !rerendu) etat.scrollAccueil = window.scrollY;
+
+  const h = location.hash || "#/";
+  let m;
+  if ((m = h.match(/^#\/produit\/([\w-]+)/))) {
+    pageProduit(m[1], rerendu);
+    if (!rerendu) window.scrollTo(0, 0);
+  } else if (h === "#/merci") {
+    pageMerci();
+    if (!rerendu) window.scrollTo(0, 0);
+  } else {
+    const cat = (h.match(/^#\/(vetements|chaussures|promos)$/) || [])[1];
+    if (!rerendu) etat.filtre = cat || (ancienneVue === "produit" ? etat.filtre : "tous");
+    pageAccueil();
+    if (!rerendu) {
+      if (cat) $("#produits").scrollIntoView();
+      else if (ancienneVue === "produit") window.scrollTo(0, etat.scrollAccueil);
+      else window.scrollTo(0, 0);
+    }
+  }
+  majNavActive();
+  majWhatsApp();
+
+  // Défilement demandé (panier, FAQ...)
+  if (etat.allerA) {
+    const cible = etat.allerA; etat.allerA = null;
+    setTimeout(() => {
+      if (cible === "form") allerAuFormulaire();
+      else { const el = $("#" + cible); if (el) el.scrollIntoView({ behavior: "smooth" }); }
+    }, 60);
+  }
+}
+window.addEventListener("hashchange", () => router());
+
+/* ==================== Démarrage ==================== */
+appliquerLangue();
+router();
+
+})();
+</script>
+</body>
+</html>
