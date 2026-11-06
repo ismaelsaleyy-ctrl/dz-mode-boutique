@@ -7,6 +7,11 @@
 <title>Dz Mode – Boutique de démonstration</title>
 <meta name="description" content="Boutique de démonstration (fictive) : vêtements et chaussures, livraison 58 wilayas, paiement à la livraison.">
 <link rel="preconnect" href="https://images.unsplash.com">
+<!-- Animations : GSAP + ScrollTrigger + Lenis (versions figées). "defer" = ne bloque jamais l'affichage.
+     Si ces fichiers ne chargent pas, la boutique reste complète (simplement sans ces effets). -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" integrity="sha384-B2WBjDzEjJpYvhmi2UyEn7rektqkf5suS6sNoyyrf0EBAwBHdkiXxIlU0V5Ru2ed" crossorigin="anonymous"></script>
 
 <script>
 /* ==========================================================================
@@ -228,6 +233,14 @@ const AVIS_EXEMPLE = [
   { nom: "Yacine M.", ville: { fr: "Sétif", ar: "سطيف" }, note: 4,
     texte: { fr: "Bon produit. J'ai échangé la taille sans problème.", ar: "منتج جيد. استبدلت المقاس بدون أي مشكل." } }
 ];
+
+/* ---------- 11. ANIMATIONS ---------- */
+// Si le visiteur a activé "réduire les animations" sur son téléphone / PC, tout s'affiche sans mouvement, quoi qu'il arrive.
+const ANIMATIONS_ACTIVES = true;     // false = site sans aucune animation (tout s'affiche directement, plus léger)
+const DEFILEMENT_DOUX = true;        // true = défilement fluide à la molette sur ordinateur (le toucher mobile reste normal)
+const CURSEUR_ETIQUETTE = true;      // true = rond qui suit la souris, avec "Voir" sur les produits et "Zoom" sur la galerie (ordinateur seulement)
+const CARTES_3D = true;              // true = les cartes produits s'inclinent légèrement sous la souris (ordinateur seulement)
+const BANDEAU_DEFILANT = true;       // true = le bandeau promo du haut défile en continu (false = texte fixe centré)
 
 /* ==========================================================================
    FIN DE LA CONFIGURATION — pas besoin de modifier le code en dessous
@@ -570,9 +583,80 @@ html[dir=rtl] input[name=tel]{text-align:right}
 .wa:hover{transform:scale(1.07)}
 body.sticky-on .wa{bottom:84px}
 @media(min-width:900px){body.sticky-on .wa{bottom:18px}}
-.toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-150%);background:var(--c-principale);color:#fff;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;z-index:60;box-shadow:var(--ombre);transition:transform .3s;max-width:calc(100% - 32px);text-align:center}
+.toast{position:fixed;left:50%;top:18px;transform:translate(-50%,calc(-100% - 40px));background:var(--c-principale);color:#fff;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;z-index:60;box-shadow:var(--ombre);transition:transform .3s;max-width:calc(100% - 32px);text-align:center}
 .toast.show{transform:translate(-50%,0)}
 .toast.err{background:#DC2626}
+
+/* ==========================================================================
+   ANIMATIONS — tout est visible par défaut. Les effets ne s'appliquent que
+   sous html.anim (ANIMATIONS_ACTIVES + pas de "réduire les animations").
+   ========================================================================== */
+:root{--ease-out:cubic-bezier(.16,1,.3,1)}
+
+/* Lenis (défilement doux) */
+html.lenis,html.lenis body{height:auto}
+html.lenis{scroll-behavior:auto!important}   /* Lenis gère déjà le doux : les sauts de page doivent rester immédiats */
+.lenis.lenis-stopped{overflow:hidden}
+
+/* Apparition au scroll : on anime "translate" (et pas "transform") pour laisser
+   "transform" libre à l'inclinaison 3D des cartes. */
+.anim [data-reveal]{opacity:0;translate:0 26px;
+  transition:opacity .8s var(--ease-out),translate .8s var(--ease-out),box-shadow .2s,transform .2s;
+  transition-delay:calc(var(--i,0) * 80ms),calc(var(--i,0) * 80ms),0s,0s}
+.anim [data-reveal].is-in{opacity:1;translate:0 0}
+
+/* Hero : la photo est visible dès la 1re image (léger zoom 1.08 → 1), le titre monte mot par mot */
+.hero-media{position:absolute;left:0;right:0;top:-10%;bottom:-10%}
+.mot{display:inline-block;overflow:hidden;vertical-align:top;padding:.1em 0 .14em;margin:-.1em 0 -.14em}
+.mot > span{display:inline-block}
+.anim .hero-intro .hero-media img{animation:hero-zoom 1.8s var(--ease-out) backwards}
+.anim .hero-intro .mot > span{animation:mot-monte 1s var(--ease-out) backwards;animation-delay:calc(120ms + var(--i,0) * 70ms)}
+.anim .hero-intro .hero-tag{animation:monte-doux .7s var(--ease-out) backwards}
+.anim .hero-intro .hero-content p{animation:monte-doux .8s var(--ease-out) .35s backwards}
+.anim .hero-intro .hero-content .btn{animation:monte-doux .8s var(--ease-out) .45s backwards}
+@keyframes hero-zoom{from{transform:scale(1.08)}}
+@keyframes mot-monte{from{transform:translateY(110%)}}
+@keyframes monte-doux{from{opacity:0;transform:translateY(14px)}}
+
+/* Photos : fondu une fois chargées (le fond gris de l'emplacement reste visible en attendant) */
+.anim .img-load{opacity:0;transition:opacity .5s ease,transform .4s}
+.anim .img-load.ok{opacity:1}
+
+/* Bandeau promo défilant (sens inversé en arabe) */
+.promo-bar.marquee{display:block;padding:8px 0;overflow:hidden;white-space:nowrap}
+.marquee__in{display:inline-flex;animation:defile 45s linear infinite}
+.marquee__grp{display:inline-flex}
+.marquee__item{display:inline-flex;align-items:center;gap:8px;padding-inline-end:56px}
+html[dir=rtl] .marquee__in{animation-name:defile-rtl}
+.promo-bar.marquee:hover .marquee__in{animation-play-state:paused}
+@keyframes defile{to{transform:translateX(-50%)}}
+@keyframes defile-rtl{to{transform:translateX(50%)}}
+
+/* Curseur avec étiquette (ordinateur seulement, affiché par le JS) */
+.curseur{display:none;position:fixed;left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--c-accent);pointer-events:none;z-index:9999;opacity:0;place-items:center;color:#fff;font-size:12.5px;font-weight:700;line-height:1;transition:width .3s var(--ease-out),height .3s var(--ease-out),margin .3s var(--ease-out),opacity .25s}
+html.curseur-on .curseur{display:grid}
+.curseur.on{opacity:1}
+.curseur span{opacity:0;transition:opacity .2s;white-space:nowrap}
+.curseur.label{width:68px;height:68px;margin:-34px 0 0 -34px}
+.curseur.label span{opacity:1}
+@media (hover:none),(pointer:coarse){html.curseur-on .curseur{display:none}}
+
+/* Cartes 3D : GSAP gère "transform", on retire la transition CSS qui le ralentirait */
+html.tilt .card{transition-property:opacity,translate,box-shadow}
+
+/* Galerie : zoom au clic sur ordinateur */
+.g-main img{transform-origin:var(--zx,50%) var(--zy,50%);transition:transform .45s var(--ease-out)}
+.g-main.zoom img{transform:scale(2)}
+@media (hover:hover) and (pointer:fine){.g-main{cursor:zoom-in}.g-main.zoom{cursor:zoom-out}}
+
+/* Prix total : le compteur a besoin d'un bloc pour le petit "pop" */
+.js-total{display:inline-block}
+
+@media (prefers-reduced-motion:reduce){
+  .marquee__in{animation:none}
+  .merci-ico{animation:none}
+  .g-main img{transition:none}
+}
 </style>
 </head>
 <body>
@@ -589,6 +673,7 @@ body.sticky-on .wa{bottom:84px}
   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
 </a>
 <div class="toast" id="toast" role="status"></div>
+<div class="curseur" id="curseur" aria-hidden="true"><span></span></div>
 
 <script>
 (function () {
@@ -601,6 +686,17 @@ const app = $("#app");
 const pad = n => String(n).padStart(2, "0");
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 window.IMG_SECOURS = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#E5E7EB"/><text x="200" y="208" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#9CA3AF">' + NOM_BOUTIQUE + '</text></svg>');
+
+/* ==================== Animations : garde-fous ====================
+   animOK : effets CSS (hero, apparitions, fondu des photos, bandeau) — ne dépendent pas du CDN.
+   G / ST / lenis : remplis seulement quand GSAP, ScrollTrigger et Lenis ont chargé. */
+const mq = q => !!(window.matchMedia && matchMedia(q).matches);
+const reduire = mq("(prefers-reduced-motion: reduce)");
+const souris = mq("(hover: hover) and (pointer: fine)");
+const animOK = ANIMATIONS_ACTIVES && !reduire;
+if (animOK) document.documentElement.classList.add("anim");
+let G = null, ST = null, lenis = null;
+const sens = () => (document.documentElement.dir === "rtl" ? -1 : 1);
 
 /* ==================== Langue ==================== */
 let lang = LANGUE_PAR_DEFAUT === "ar" ? "ar" : "fr";
@@ -663,7 +759,8 @@ const I18N = {
     footerTexte: "Vêtements et chaussures tendance, livrés dans les 58 wilayas. Paiement à la livraison.",
     footerBoutique: "Boutique", footerAide: "Aide", footerSuivre: "Suivez-nous", faq: "FAQ", livraisonInfo: "Livraison & paiement",
     footerDemo: "Site de démonstration – boutique fictive. Les produits, prix et avis sont des exemples.", droits: "Tous droits réservés.",
-    waMsg: "Bonjour {b}, j'ai une question.", waMsgProduit: "Bonjour {b}, je suis intéressé(e) par : {p}"
+    waMsg: "Bonjour {b}, j'ai une question.", waMsgProduit: "Bonjour {b}, je suis intéressé(e) par : {p}",
+    curseurVoir: "Voir", curseurZoom: "Zoom", curseurReduire: "Réduire"
   },
   ar: {
     demo: "موقع تجريبي – متجر وهمي",
@@ -720,7 +817,8 @@ const I18N = {
     footerTexte: "ملابس وأحذية عصرية، توصيل إلى 58 ولاية. الدفع عند الاستلام.",
     footerBoutique: "المتجر", footerAide: "مساعدة", footerSuivre: "تابعنا", faq: "الأسئلة الشائعة", livraisonInfo: "التوصيل والدفع",
     footerDemo: "موقع تجريبي – متجر وهمي. المنتجات والأسعار والآراء مجرد أمثلة.", droits: "جميع الحقوق محفوظة.",
-    waMsg: "مرحباً {b}، عندي سؤال.", waMsgProduit: "مرحباً {b}، أنا مهتم بـ: {p}"
+    waMsg: "مرحباً {b}، عندي سؤال.", waMsgProduit: "مرحباً {b}، أنا مهتم بـ: {p}",
+    curseurVoir: "عرض", curseurZoom: "تكبير", curseurReduire: "تصغير"
   }
 };
 function t(k, v) {
@@ -738,8 +836,9 @@ function imgUrl(src, w) {
   try { const u = new URL(src); u.searchParams.set("w", w); if (u.searchParams.has("h")) u.searchParams.set("h", w); return u.toString(); }
   catch (e) { return src; }
 }
-const img = (src, w, alt, extra) =>
-  `<img src="${imgUrl(src, w)}" alt="${esc(alt)}" width="${w}" height="${w}" ${extra || 'loading="lazy"'} decoding="async" onerror="this.onerror=null;this.src=window.IMG_SECOURS">`;
+// cls = "img-load" : la photo apparaît en fondu une fois chargée (jamais pour l'image principale d'une page)
+const img = (src, w, alt, extra, cls) =>
+  `<img${cls ? ` class="${cls}"` : ""} src="${imgUrl(src, w)}" alt="${esc(alt)}" width="${w}" height="${w}" ${extra || 'loading="lazy"'} decoding="async" onload="this.classList.add('ok')" onerror="this.onerror=null;this.src=window.IMG_SECOURS">`;
 
 /* ==================== Icônes ====================
    Lucide (lucide.dev, licence ISC) pour l'interface,
@@ -788,7 +887,9 @@ const etat = {
   derniereCommande: null,
   allerA: null,         // "form" | "faq" | "produits" : défilement après affichage
   scrollAccueil: 0,
-  obs: null
+  obs: null,
+  rerendu: false,       // true quand on ré-affiche la même page (changement de langue) : pas d'animation d'entrée
+  totalAffiche: null    // dernier prix total affiché (pour le compteur animé)
 };
 const produitCourant = () => etat.sel && PRODUITS.find(p => p.id === etat.sel.id);
 
@@ -804,7 +905,16 @@ function lienWhatsApp(p) {
 }
 function renderEntete() {
   $("#demo-bar").textContent = t("demo");
-  $("#promo-bar").innerHTML = ico("truck", 16) + "<span>" + esc(tx(BANDEAU_PROMO)) + "</span>";
+  const pb = $("#promo-bar"), msg = esc(tx(BANDEAU_PROMO));
+  if (animOK && BANDEAU_DEFILANT) {
+    // Le message est répété pour remplir les grands écrans ; 2 groupes identiques = boucle sans saut.
+    const grp = `<span class="marquee__grp">${(`<span class="marquee__item">${ico("truck", 16)}<span>${msg}</span></span>`).repeat(6)}</span>`;
+    pb.classList.add("marquee");
+    pb.innerHTML = `<span class="visually-hidden">${msg}</span><span class="marquee__in" aria-hidden="true">${grp}${grp}</span>`;
+  } else {
+    pb.classList.remove("marquee");
+    pb.innerHTML = ico("truck", 16) + "<span>" + msg + "</span>";
+  }
   $("#header").innerHTML = `
     <a class="logo" href="#/" aria-label="${esc(NOM_BOUTIQUE)}">${logoHtml()}</a>
     <nav class="nav" aria-label="Menu">
@@ -874,9 +984,9 @@ function majBadge() {
 /* ==================== Blocs réutilisables ==================== */
 function htmlCarte(p, i) {
   return `
-  <a class="card" href="#/produit/${p.id}">
+  <a class="card" href="#/produit/${p.id}" data-reveal style="--i:${i % 4}" data-cursor="${esc(t("curseurVoir"))}">
     <div class="card-img">
-      ${img(p.photos[0], 500, tx(p.nom), i < 2 ? 'fetchpriority="high"' : 'loading="lazy"')}
+      ${img(p.photos[0], 500, tx(p.nom), i < 2 ? 'fetchpriority="high"' : 'loading="lazy"', "img-load")}
       <span class="badge">${t("badgePromo")}</span>
       <span class="badge-pct">-${remise(p)}%</span>
     </div>
@@ -891,7 +1001,7 @@ function htmlFaq() {
   return `
   <section class="section faq" id="faq">
     <div class="section-head"><h2>${t("faqTitre")}</h2></div>
-    ${[1, 2, 3, 4].map(i => `<details${i === 1 ? " open" : ""}><summary><span>${t("faq" + i + "q")}</span>${ico("chevron-down", 20, "chev")}</summary><p>${t("faq" + i + "r")}</p></details>`).join("")}
+    ${[1, 2, 3, 4].map(i => `<details${i === 1 ? " open" : ""} data-reveal style="--i:${i - 1}"><summary><span>${t("faq" + i + "q")}</span>${ico("chevron-down", 20, "chev")}</summary><p>${t("faq" + i + "r")}</p></details>`).join("")}
   </section>`;
 }
 function htmlPourquoi() {
@@ -900,7 +1010,7 @@ function htmlPourquoi() {
   <section class="section">
     <div class="section-head"><h2>${t("pourquoiTitre")}</h2></div>
     <div class="why">
-      ${items.map(([nomIco, i]) => `<div class="why-item"><div class="why-ico">${ico(nomIco, 24)}</div><b>${t("p" + i + "t")}</b><p>${t("p" + i + "d")}</p></div>`).join("")}
+      ${items.map(([nomIco, i]) => `<div class="why-item" data-reveal style="--i:${i - 1}"><div class="why-ico">${ico(nomIco, 24)}</div><b>${t("p" + i + "t")}</b><p>${t("p" + i + "d")}</p></div>`).join("")}
     </div>
   </section>`;
 }
@@ -925,12 +1035,17 @@ function pageAccueil() {
   etat.vue = "accueil";
   document.title = NOM_BOUTIQUE + " – " + (lang === "ar" ? "ملابس وأحذية – الدفع عند الاستلام" : "Vêtements & chaussures – Paiement à la livraison");
   const pv = PRODUITS.find(p => p.categorie === "vetements"), pc = PRODUITS.find(p => p.categorie === "chaussures");
+  // Titre découpé par MOTS (jamais par lettres : les lettres arabes liées resteraient cassées)
+  const titre = tx(BANNIERE.titre);
+  const titreHtml = animOK
+    ? titre.trim().split(/\s+/).map((m, i) => `<span class="mot"><span style="--i:${i}">${esc(m)}</span></span>`).join(" ")
+    : esc(titre);
   app.innerHTML = `
-    <section class="hero">
-      <img src="${esc(BANNIERE.image)}" alt="" fetchpriority="high" onerror="this.style.display='none'">
+    <section class="hero${animOK && !etat.rerendu ? " hero-intro" : ""}">
+      <div class="hero-media"><img src="${esc(BANNIERE.image)}" alt="" fetchpriority="high" onerror="this.style.display='none'"></div>
       <div class="hero-content">
         <span class="hero-tag">${esc(tx(BANNIERE.etiquette))}</span>
-        <h1>${esc(tx(BANNIERE.titre))}</h1>
+        <h1>${titreHtml}</h1>
         <p>${esc(tx(BANNIERE.texte))}</p>
         <a class="btn btn-blanc" href="#/promos">${t("acheter")} ${ico("arrow-right", 18, "flip")}</a>
       </div>
@@ -939,8 +1054,8 @@ function pageAccueil() {
       <span>${ico("truck")}${t("trust1")}</span><span>${ico("banknote")}${t("trust2")}</span><span>${ico("refresh-ccw")}${t("trust3")}</span>
     </div>
     <div class="cats">
-      <a class="cat" href="#/vetements">${img(pv.photos[1] || pv.photos[0], 600, t("navVet"))}<div><b>${t("navVet")}</b><small>${t("catVoir")} ${ico("arrow-right", 14, "flip")}</small></div></a>
-      <a class="cat" href="#/chaussures">${img(pc.photos[0], 600, t("navCha"))}<div><b>${t("navCha")}</b><small>${t("catVoir")} ${ico("arrow-right", 14, "flip")}</small></div></a>
+      <a class="cat" href="#/vetements">${img(pv.photos[1] || pv.photos[0], 600, t("navVet"), null, "img-load")}<div><b>${t("navVet")}</b><small>${t("catVoir")} ${ico("arrow-right", 14, "flip")}</small></div></a>
+      <a class="cat" href="#/chaussures">${img(pc.photos[0], 600, t("navCha"), null, "img-load")}<div><b>${t("navCha")}</b><small>${t("catVoir")} ${ico("arrow-right", 14, "flip")}</small></div></a>
     </div>
     <section class="section" id="produits">${htmlGrille()}</section>
     ${htmlPourquoi()}
@@ -986,6 +1101,7 @@ function pageProduit(id, garder) {
     etat.icEnvoye = false;
     garder = false;
   }
+  if (!garder) etat.totalAffiche = null;   // nouveau produit : le total s'affiche sans compteur
   etat.vue = "produit";
   document.title = tx(p.nom) + " – " + NOM_BOUTIQUE;
   const f = etat.form, s = etat.sel;
@@ -995,13 +1111,13 @@ function pageProduit(id, garder) {
     <a class="back" href="#/">${ico("arrow-left", 16, "flip")}${t("retour")}</a>
     <div class="pp">
       <div class="gallery">
-        <div class="g-main" id="g-main">
+        <div class="g-main" id="g-main" data-cursor="${esc(t("curseurZoom"))}">
           ${img(p.photos[s.photo], 900, tx(p.nom), 'fetchpriority="high" id="g-img"')}
           <span class="g-count" id="g-count">${s.photo + 1} / ${p.photos.length}</span>
           <span class="badge">${t("badgePromo")} -${remise(p)}%</span>
         </div>
         <div class="g-thumbs">
-          ${p.photos.map((ph, i) => `<button type="button" class="${i === s.photo ? "on" : ""}" data-act="photo" data-i="${i}" aria-label="Photo ${i + 1}">${img(ph, 200, "")}</button>`).join("")}
+          ${p.photos.map((ph, i) => `<button type="button" class="${i === s.photo ? "on" : ""}" data-act="photo" data-i="${i}" aria-label="Photo ${i + 1}">${img(ph, 200, "", null, "img-load")}</button>`).join("")}
         </div>
       </div>
 
@@ -1119,6 +1235,7 @@ function afficherPhoto(i) {
   const p = produitCourant(); if (!p) return;
   const n = p.photos.length;
   etat.sel.photo = (i + n) % n;
+  zoomGalerie(false);
   const im = $("#g-img");
   im.src = imgUrl(p.photos[etat.sel.photo], 900);
   $("#g-count").textContent = (etat.sel.photo + 1) + " / " + n;
@@ -1180,8 +1297,36 @@ function majRecap() {
     <div class="row"><span>${t("sousTotal")}</span><span>${prix(tt.sousTotal)}</span></div>
     <div class="row"><span>${t("livraison")}</span><span>${tt.frais === null ? '<span class="muted">' + t("choisirWilayaCourt") + "</span>" : prix(tt.frais)}</span></div>
     <div class="sep"></div>
-    <div class="row total"><span>${t("total")}</span><span>${prix(tt.total)}</span></div>`;
-  $$(".js-total").forEach(e => { e.textContent = prix(tt.total); });
+    <div class="row total"><span>${t("total")}</span><span class="js-total">${prix(tt.total)}</span></div>`;
+  afficherTotal(tt.total);
+}
+/* Prix total : compteur animé quand la wilaya, le type de livraison ou la quantité change.
+   Purement visuel : la commande utilise toujours totaux(), jamais le texte affiché. */
+const compteur = { v: 0 };
+function afficherTotal(n) {
+  const ecrire = v => { const s = prix(v); $$(".js-total").forEach(e => { e.textContent = s; }); };
+  const avant = etat.totalAffiche;
+  etat.totalAffiche = n;
+  if (!G || avant === null) { if (G) G.killTweensOf(compteur); compteur.v = n; ecrire(n); return; }
+  if (avant === n) { ecrire(G.isTweening(compteur) ? compteur.v : n); return; }
+  ecrire(compteur.v);
+  G.to(compteur, { v: n, duration: 0.45, ease: "power2.out", overwrite: true,
+    onUpdate: () => ecrire(compteur.v), onComplete: () => ecrire(n) });
+  G.fromTo($$(".js-total"), { scale: 1.08 }, { scale: 1, duration: 0.45, ease: "power3.out", overwrite: true, clearProps: "transform" });
+}
+/* Petit rebond quand on choisit une taille / couleur */
+function rebond(el) {
+  if (G && el) G.fromTo(el, { scale: 0.92 }, { scale: 1, duration: 0.35, ease: "back.out(3)", overwrite: true, clearProps: "transform" });
+}
+/* Secousse d'un champ en erreur (le message rouge reste affiché) */
+function secouer(el) {
+  if (G && el) G.fromTo(el, { x: -6 * sens() }, { x: 0, duration: 0.45, ease: "elastic.out(1, 0.3)", overwrite: true, clearProps: "transform" });
+}
+/* Galerie : zoom au clic (ordinateur), le zoom suit la souris */
+function zoomGalerie(on) {
+  const g = $("#g-main"); if (!g) return;
+  g.classList.toggle("zoom", !!on);
+  g.dataset.cursor = t(on ? "curseurReduire" : "curseurZoom");
 }
 function majOptions() {
   const p = produitCourant(); if (!p) return;
@@ -1205,7 +1350,7 @@ function ajouterAuPanier() {
 function ouvrirPanier() {
   if (!etat.panier) {
     toast(t("panierVide"));
-    if (etat.vue === "accueil") $("#produits").scrollIntoView({ behavior: "smooth" });
+    if (etat.vue === "accueil") allerA($("#produits"));
     else { etat.allerA = "produits"; location.hash = "#/"; }
     return;
   }
@@ -1214,8 +1359,23 @@ function ouvrirPanier() {
 }
 function allerAuFormulaire() {
   const cible = etat.sel && !etat.sel.taille ? $("#grp-taille") : $("#form-commande");
-  if (cible) cible.scrollIntoView({ behavior: "smooth", block: "start" });
+  allerA(cible);
   if (etat.sel && !etat.sel.taille) afficherErreurs({ taille: t("errTaille") });
+}
+
+/* --- Défilement (passe par Lenis s'il est actif, sinon défilement natif) --- */
+const decalage = () => -((($(".header") || {}).offsetHeight || 0) + 12);   // laisse la place à l'en-tête collant
+function allerA(el, centrer) {           // défilement doux vers un élément
+  if (!el) return;
+  const off = centrer ? -Math.max(0, (innerHeight - el.offsetHeight) / 2) : decalage();
+  if (lenis) { lenis.scrollTo(el, { offset: off, duration: 0.9 }); return; }
+  const y = el.getBoundingClientRect().top + scrollY + off;
+  try { scrollTo({ top: y, behavior: reduire ? "auto" : "smooth" }); } catch (e) { scrollTo(0, y); }
+}
+function sauterA(cible) {                // saut immédiat (changement de page) : nombre ou élément
+  const y = typeof cible === "number" ? cible : (cible ? cible.getBoundingClientRect().top + scrollY + decalage() : 0);
+  if (lenis) { lenis.resize(); lenis.scrollTo(Math.max(0, y), { immediate: true, force: true }); return; }
+  try { scrollTo({ top: y, behavior: "instant" }); } catch (e) { scrollTo(0, y); }
 }
 
 /* --- Bouton collant (mobile) --- */
@@ -1245,6 +1405,7 @@ function afficherErreurs(err) {
     const m = $('[data-err="' + k + '"]'); if (m) m.textContent = err[k];
     const f = $('[data-f="' + k + '"]'); if (f) f.classList.add("err");
     if (k === "taille") { const g = $("#grp-taille"); if (g) g.classList.add("grp-err"); }
+    secouer(k === "taille" ? $("#grp-taille .opt-list") : f);
   });
 }
 function effacerErreur(k) {
@@ -1333,7 +1494,7 @@ async function soumettre(e) {
     const ordre = ["taille", "nom", "tel", "wilaya", "commune", "adresse"];
     const premier = ordre.find(k => err[k]);
     const cible = premier === "taille" ? $("#grp-taille") : $('[data-f="' + premier + '"]');
-    if (cible) cible.scrollIntoView({ behavior: "smooth", block: "center" });
+    allerA(cible, true);
     const champ = premier !== "taille" && $('#form-commande [name="' + premier + '"]');
     if (champ) setTimeout(() => champ.focus({ preventScroll: true }), 350);
     return;
@@ -1374,6 +1535,7 @@ async function soumettre(e) {
     return;
   }
 
+  // Pixel Purchase envoyé ICI, avant tout changement de page ou animation de la page merci.
   suivre("Purchase", donneesPixel(p, s.qte, tt.total), numero);
 
   etat.derniereCommande = { c: commande, pid: p.id, couleur: s.couleur, wilaya: w, type: f.livraison };
@@ -1392,7 +1554,7 @@ function pageMerci() {
   document.title = t("mTitre") + " – " + NOM_BOUTIQUE;
   app.innerHTML = `
     <section class="merci">
-      <div class="merci-ico">${ico("check", 36)}</div>
+      <div class="merci-ico">${ico("check", 36).replace("<path ", '<path pathLength="1" ')}</div>
       <h1>${t("mTitre")}</h1>
       <p class="lead">${t("mTexte")}</p>
       <span class="num">${t("mNumero")} <span dir="ltr">${esc(c.numero)}</span></span>
@@ -1447,6 +1609,9 @@ document.addEventListener("click", e => {
   const a = e.target.closest("[data-act]");
   if (a) {
     const act = a.dataset.act, p = produitCourant();
+    const avaitFocus = document.activeElement === a;
+    // Après ré-affichage des options : rebond sur le bouton choisi (+ on lui rend le focus clavier)
+    const choisi = sel => { const b = $(sel); rebond(b); if (b && avaitFocus) b.focus({ preventScroll: true }); };
     switch (act) {
       case "lang": changerLangue(); break;
       case "panier": ouvrirPanier(); break;
@@ -1454,31 +1619,53 @@ document.addEventListener("click", e => {
       case "couleur":
         etat.sel.couleur = +a.dataset.i; majOptions();
         if (etat.panier && etat.panier.id === p.id) etat.panier.couleur = etat.sel.couleur;
+        choisi('[data-act="couleur"][data-i="' + etat.sel.couleur + '"]');
         break;
       case "taille":
-        etat.sel.taille = a.dataset.v; majOptions(); ajouterAuPanier(); break;
+        etat.sel.taille = a.dataset.v; majOptions(); ajouterAuPanier();
+        choisi('[data-act="taille"][data-v="' + etat.sel.taille + '"]');
+        break;
       case "moins":
       case "plus": {
         const max = Math.min(p.stock || 10, 10);
         etat.sel.qte = Math.max(1, Math.min(max, etat.sel.qte + (act === "plus" ? 1 : -1)));
-        majOptions(); ajouterAuPanier(); break;
+        majOptions(); ajouterAuPanier();
+        if (avaitFocus) { const b = $('[data-act="' + act + '"]'); if (b) b.focus({ preventScroll: true }); }
+        break;
       }
       case "vers-form": allerAuFormulaire(); break;
       case "filtre":
         etat.filtre = a.dataset.v;
         $("#produits").innerHTML = htmlGrille();
+        reveal($("#produits"));
+        if (avaitFocus) { const b = $('[data-act="filtre"][data-v="' + etat.filtre + '"]'); if (b) b.focus({ preventScroll: true }); }
         break;
       case "faq":
-        if ($("#faq")) $("#faq").scrollIntoView({ behavior: "smooth" });
+        if ($("#faq")) allerA($("#faq"));
         else { etat.allerA = "faq"; location.hash = "#/"; }
         break;
     }
     return;
   }
+  // Galerie : zoom au clic, seulement à la souris (sur mobile on garde le glissement)
+  const gm = souris && e.target.closest("#g-main");
+  if (gm) { zoomGalerie(!gm.classList.contains("zoom")); return; }
   // Re-clic sur le lien de la page déjà ouverte → on ré-affiche quand même
   const lien = e.target.closest('a[href^="#/"]');
-  if (lien && lien.getAttribute("href") === location.hash) { e.preventDefault(); router(); }
+  if (lien && lien.getAttribute("href") === location.hash) { e.preventDefault(); changerPage(); }
 });
+if (souris) {
+  document.addEventListener("pointermove", e => {
+    const gm = e.target.closest && e.target.closest("#g-main"); if (!gm) return;
+    const r = gm.getBoundingClientRect();
+    gm.style.setProperty("--zx", ((e.clientX - r.left) / r.width * 100).toFixed(1) + "%");
+    gm.style.setProperty("--zy", ((e.clientY - r.top) / r.height * 100).toFixed(1) + "%");
+  }, { passive: true });
+  document.addEventListener("pointerout", e => {
+    const gm = e.target.closest && e.target.closest("#g-main");
+    if (gm && !gm.contains(e.relatedTarget)) zoomGalerie(false);
+  });
+}
 
 /* ==================== Langue ==================== */
 function appliquerLangue() {
@@ -1492,13 +1679,14 @@ function changerLangue() {
   try { localStorage.setItem("boutique_lang", lang); } catch (e) {}
   const y = window.scrollY;
   appliquerLangue();
-  router(true);
-  window.scrollTo(0, y);
+  afficherPage(true);
+  sauterA(y);
 }
 
 /* ==================== Routeur (#/ , #/produit/id , #/merci ...) ==================== */
 function router(rerendu) {
   rerendu = rerendu === true;
+  etat.rerendu = rerendu;
   if (etat.obs) { etat.obs.disconnect(); etat.obs = null; }
   document.body.classList.remove("sticky-on");
   if (!rerendu) $("#toast").classList.remove("show");
@@ -1509,18 +1697,18 @@ function router(rerendu) {
   let m;
   if ((m = h.match(/^#\/produit\/([\w-]+)/))) {
     pageProduit(m[1], rerendu);
-    if (!rerendu) window.scrollTo(0, 0);
+    if (!rerendu) sauterA(0);
   } else if (h === "#/merci") {
     pageMerci();
-    if (!rerendu) window.scrollTo(0, 0);
+    if (!rerendu) sauterA(0);
   } else {
     const cat = (h.match(/^#\/(vetements|chaussures|promos)$/) || [])[1];
     if (!rerendu) etat.filtre = cat || (ancienneVue === "produit" ? etat.filtre : "tous");
     pageAccueil();
     if (!rerendu) {
-      if (cat) $("#produits").scrollIntoView();
-      else if (ancienneVue === "produit") window.scrollTo(0, etat.scrollAccueil);
-      else window.scrollTo(0, 0);
+      if (cat) sauterA($("#produits"));
+      else if (ancienneVue === "produit") sauterA(etat.scrollAccueil);
+      else sauterA(0);
     }
   }
   majNavActive();
@@ -1531,15 +1719,128 @@ function router(rerendu) {
     const cible = etat.allerA; etat.allerA = null;
     setTimeout(() => {
       if (cible === "form") allerAuFormulaire();
-      else { const el = $("#" + cible); if (el) el.scrollIntoView({ behavior: "smooth" }); }
+      else allerA($("#" + cible));
     }, 60);
   }
 }
-window.addEventListener("hashchange", () => router());
+
+/* ==================== Animations ==================== */
+/* Apparition au scroll (cartes, "Pourquoi nous choisir", FAQ). Jamais sur le formulaire, le prix ou le bouton. */
+let ioReveal = null;
+function reveal(racine, instant) {
+  const els = $$("[data-reveal]:not(.is-in)", racine);
+  if (!animOK || instant || !("IntersectionObserver" in window)) { els.forEach(e => e.classList.add("is-in")); return; }
+  if (!ioReveal) ioReveal = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting) { en.target.classList.add("is-in"); ioReveal.unobserve(en.target); }
+  }), { rootMargin: "0px 0px -8% 0px" });
+  els.forEach(e => (e.getBoundingClientRect().top < innerHeight * 0.92 ? e.classList.add("is-in") : ioReveal.observe(e)));
+}
+/* Hero : léger parallax de la photo au scroll (part de 0 : aucun saut à l'arrivée de GSAP) */
+function parallaxHero() {
+  const m = $(".hero-media");
+  if (!m || !G || !ST) return;
+  G.fromTo(m, { yPercent: 0 }, { yPercent: 8, ease: "none",
+    scrollTrigger: { trigger: m.parentNode, start: 0, end: "bottom top", scrub: true } });
+}
+/* Page merci : coche dessinée + récapitulatif qui monte (le pixel Purchase est déjà parti) */
+function animerMerci() {
+  const r = $(".merci"); if (!r || !G) return;
+  const tl = G.timeline({ defaults: { ease: "expo.out" } });
+  const trait = $(".merci-ico path", r);
+  if (trait) tl.fromTo(trait, { strokeDasharray: 1, strokeDashoffset: 1.01 }, { strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, 0.15);
+  tl.from($$("h1, .lead, .num", r), { y: 12, opacity: 0, duration: 0.45, stagger: 0.05 }, 0.1)
+    .from($$(".recap > *", r), { y: 14, opacity: 0, duration: 0.45, stagger: 0.025 }, 0.25)
+    .from($$(".info-tel, .merci-btns", r), { y: 10, opacity: 0, duration: 0.4, stagger: 0.05 }, 0.45);
+}
+/* Effets de la page qui vient d'être affichée */
+function effetsPage() {
+  reveal(app, etat.rerendu);
+  if (!G) return;
+  parallaxHero();
+  if (etat.vue === "merci" && !etat.rerendu) animerMerci();
+}
+/* Affiche la page courante, en nettoyant les effets de l'ancienne */
+function afficherPage(rerendu) {
+  if (ST) ST.getAll().forEach(tr => tr.kill());
+  if (ioReveal) ioReveal.disconnect();
+  router(rerendu);
+  effetsPage();
+  if (ST) ST.refresh();
+}
+/* Transition en fondu entre les pages (accueil / produit / merci) */
+let transition = null;
+function changerPage() {
+  if (!G) { afficherPage(); return; }
+  if (transition) transition.kill();
+  transition = G.to(app, { opacity: 0, duration: 0.18, ease: "power2.in", overwrite: true, onComplete: () => {
+    transition = null;
+    afficherPage();
+    G.fromTo(app, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out", overwrite: true, clearProps: "opacity" });
+    // léger glissement des blocs (pas sur #app : un transform casserait la barre "Commander" fixe)
+    G.fromTo($$(":scope > :not(.sticky-cta)", app), { y: 14 }, { y: 0, duration: 0.5, ease: "expo.out", clearProps: "transform" });
+  }});
+}
+window.addEventListener("hashchange", () => changerPage());
+
+/* Curseur avec étiquette (ordinateur) */
+function initCurseur() {
+  const c = $("#curseur"), lab = c.firstElementChild;
+  const qx = G.quickTo(c, "x", { duration: 0.35, ease: "power3" }), qy = G.quickTo(c, "y", { duration: 0.35, ease: "power3" });
+  let premier = true;
+  document.documentElement.classList.add("curseur-on");
+  addEventListener("pointermove", e => {
+    if (e.pointerType && e.pointerType !== "mouse") return;
+    if (premier) { G.set(c, { x: e.clientX, y: e.clientY }); premier = false; }
+    qx(e.clientX); qy(e.clientY); c.classList.add("on");
+    const cible = e.target.closest ? e.target.closest("[data-cursor]") : null;
+    if (cible && lab.textContent !== cible.dataset.cursor) lab.textContent = cible.dataset.cursor;
+    c.classList.toggle("label", !!cible);
+  }, { passive: true });
+  document.documentElement.addEventListener("pointerleave", () => c.classList.remove("on"));
+}
+/* Inclinaison 3D légère des cartes produits (ordinateur) */
+function initCartes3D() {
+  document.documentElement.classList.add("tilt");
+  document.addEventListener("pointermove", e => {
+    if (e.pointerType && e.pointerType !== "mouse") return;
+    const card = e.target.closest && e.target.closest(".card"); if (!card) return;
+    const r = card.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+    G.to(card, { rotateY: px * 7, rotateX: -py * 7, y: -4, transformPerspective: 900, duration: 0.4, ease: "power2.out", overwrite: "auto" });
+  }, { passive: true });
+  document.addEventListener("pointerout", e => {
+    const card = e.target.closest && e.target.closest(".card");
+    if (card && !card.contains(e.relatedTarget)) G.to(card, { rotateX: 0, rotateY: 0, y: 0, duration: 0.6, ease: "expo.out", overwrite: "auto" });
+  });
+}
+/* Branche GSAP + ScrollTrigger + Lenis quand ils ont chargé (sinon la boutique tourne sans eux) */
+function initAnimations() {
+  if (G || !animOK || !window.gsap) return;
+  try {
+    G = window.gsap;
+    if (window.ScrollTrigger) { ST = window.ScrollTrigger; G.registerPlugin(ST); }
+    document.documentElement.classList.add("js-anim");
+    if (DEFILEMENT_DOUX && window.Lenis) {
+      lenis = new Lenis({ lerp: 0.09, smoothWheel: true });   // le toucher mobile reste natif
+      if (ST) lenis.on("scroll", ST.update);
+      G.ticker.add(tm => lenis.raf(tm * 1000));
+      G.ticker.lagSmoothing(0);
+    }
+    if (souris && CURSEUR_ETIQUETTE) initCurseur();
+    if (souris && CARTES_3D) initCartes3D();
+    parallaxHero();
+    if (ST) ST.refresh();
+  } catch (err) {
+    console.warn("Animations désactivées :", err);
+    G = ST = null;
+  }
+}
 
 /* ==================== Démarrage ==================== */
 appliquerLangue();
-router();
+afficherPage();
+// Les scripts "defer" (GSAP, Lenis) sont exécutés juste avant DOMContentLoaded
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAnimations);
+else initAnimations();
 
 })();
 </script>
